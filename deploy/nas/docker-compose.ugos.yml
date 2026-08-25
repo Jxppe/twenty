@@ -1,0 +1,86 @@
+# For the UGOS Pro Docker app (Project). Values are written in rather than read
+# from .env, because the Project editor does not reliably pass an env file.
+#
+# EDIT THE FOUR LINES MARKED "CHANGE ME" BEFORE DEPLOYING.
+
+name: tll-crm
+
+x-app-env: &app-env
+  # CHANGE ME: the address you will type in the browser, port included.
+  SERVER_URL: http://192.168.1.50:3000
+  # CHANGE ME: output of `openssl rand -base64 32`. Back it up off the NAS.
+  ENCRYPTION_KEY: replace-me
+  # CHANGE ME: same password as POSTGRES_PASSWORD below. Letters and digits only.
+  PG_DATABASE_URL: postgres://postgres:replace-me-too@db:5432/default
+  REDIS_URL: redis://redis:6379
+  STORAGE_TYPE: local
+
+services:
+  server:
+    image: twentycrm/twenty:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - server-local-data:/app/packages/twenty-server/.local-storage
+    environment:
+      <<: *app-env
+      NODE_PORT: 3000
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail http://localhost:3000/healthz
+      interval: 5s
+      timeout: 5s
+      retries: 60
+    restart: unless-stopped
+
+  worker:
+    image: twentycrm/twenty:latest
+    command: ["yarn", "worker:prod"]
+    volumes:
+      - server-local-data:/app/packages/twenty-server/.local-storage
+    environment:
+      <<: *app-env
+      DISABLE_DB_MIGRATIONS: "true"
+      DISABLE_CRON_JOBS_REGISTRATION: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: default
+      POSTGRES_USER: postgres
+      # CHANGE ME: must match the password inside PG_DATABASE_URL above.
+      POSTGRES_PASSWORD: replace-me-too
+    healthcheck:
+      test: pg_isready -U postgres -h localhost -d postgres
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis
+    command: ["--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+# Docker-managed volumes, not a NAS share path: Postgres needs POSIX ownership
+# that shares do not give it.
+volumes:
+  db-data:
+  server-local-data:

@@ -8,82 +8,87 @@ This replaces `yarn twenty docker start`, which ran the all-in-one `twenty-app-d
 This one keeps the database in its own volume, which is what you want the moment real records
 go in.
 
+## Which file to use
+
+| Your route | File |
+| --- | --- |
+| UGOS Pro Docker app, the Project editor | `docker-compose.ugos.yml` |
+| SSH, or any other NAS with a shell | `docker-compose.yml` plus `.env` |
+
+They deploy the same four containers. The UGOS one carries its values inline because the
+Project editor does not reliably pass an env file, and a compose file whose `${VARS}` resolve
+to blanks starts and then fails in ways that look like a Twenty problem.
+
 ## Before you start
 
-**Check the CPU.** VERIFIED: `twentycrm/twenty:latest` publishes `linux/amd64` and `linux/arm64`.
-An Intel or Celeron NAS is amd64, a modern Synology Plus with an AMD Ryzen is amd64, and most
-recent ARM units are arm64. Older Realtek and Marvell ARMv7 boxes are neither, and nothing here
-will run on them.
+**Architecture is fine.** UGREEN's NASync line is Intel x86 throughout, and
+`twentycrm/twenty:latest` publishes `linux/amd64`. Confirm with `uname -m` over SSH if you want
+to be sure: `x86_64` is what you are looking for.
 
-**Check the RAM.** Twenty wants about 2GB for the server plus 1GB for Postgres. A 2GB NAS will
-thrash.
+**RAM matters more.** Budget about 3GB across the four containers. A DXP2800 with the stock 8GB
+is comfortable; anything already running Plex transcodes and a few VMs will not be.
 
-**Pick the address now.** `SERVER_URL` has to be the exact URL a browser types, including the
-port. Login redirects and asset URLs are built from it, so a wrong value produces an instance
-that loads and then fails to sign in. Use the NAS LAN address for now
-(`http://192.168.1.50:3000`); switch to a hostname later and restart.
+**Decide the address now.** `SERVER_URL` must be exactly what you type in the browser, port
+included. Login redirects and asset URLs are built from it, so a wrong value gives you a page
+that loads and then refuses to sign in. Use the NAS LAN address for now, for example
+`http://192.168.1.50:3000`.
 
-## Steps
+## UGOS Pro, through the Docker app
 
-1. **Make a folder on the NAS**, for example `/volume1/docker/tll-crm`.
+1. **Make a folder.** In File Manager, create `tll-crm` inside the `docker` shared folder.
 
-2. **Copy `docker-compose.yml` and `.env.example` into it**, and rename the second to `.env`.
+2. **Generate the encryption key.** On the PC, in any terminal:
 
-3. **Fill in `.env`.** Generate the key on any machine with
-
-   ```bash
+   ```
    openssl rand -base64 32
    ```
 
-   Keep `PG_DATABASE_PASSWORD` to letters and digits: special characters break the connection
-   URL, which is assembled as a string.
+   No openssl on Windows? `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`
+   does the same thing.
 
-   Back up `ENCRYPTION_KEY` somewhere outside the NAS. Without it, encrypted values are
-   unrecoverable even with a full database backup.
+3. **Edit `docker-compose.ugos.yml`** before uploading. Four lines are marked `CHANGE ME`:
+   `SERVER_URL`, `ENCRYPTION_KEY`, and the database password, which appears twice and has to
+   match in both places. Keep the password to letters and digits: a `@` or `:` in it breaks the
+   connection URL, which is assembled as a string.
 
-4. **Start it.**
+4. **Docker app, Project, Create.** Name it `tll-crm`, point the path at the folder from step 1,
+   and paste the file in, or upload it there first and let the editor read it. Deploy.
 
-   Over SSH:
+5. **Watch it come up.** The Project's log view, or Containers, `tll-crm-server-1`, Logs. First
+   boot runs database migrations and takes several minutes. Nothing is wrong until it stops
+   restarting and still fails.
 
-   ```bash
-   cd /volume1/docker/tll-crm
-   docker compose up -d
-   ```
+6. **Open it** at your `SERVER_URL` and create the first workspace.
 
-   In Synology Container Manager: Project, Create, point it at the folder, and it reads both
-   files. In QNAP Container Station: Applications, Create, paste the compose file.
+## UGOS Pro, over SSH
 
-5. **Watch the first boot.** It runs migrations and takes a few minutes.
+Faster if you are comfortable with it. Enable SSH first in Control Panel, Terminal, then:
 
-   ```bash
-   docker compose logs -f server
-   ```
+```bash
+ssh yourname@192.168.1.50
+cd /volume1/docker/tll-crm
+sudo docker compose up -d
+sudo docker compose logs -f server
+```
 
-   It is ready when `/healthz` answers:
-
-   ```bash
-   curl http://localhost:3000/healthz
-   ```
-
-6. **Open it** at the `SERVER_URL` value and create the first workspace.
+`sudo` is needed: the Docker socket on UGOS is root-owned. Check the volume name with
+`ls /volume1` if that path does not exist. This route can use `docker-compose.yml` with a `.env`
+file beside it, which keeps the secrets out of the compose file.
 
 ## Pointing the app at it
 
 From the development PC, in `apps/tll-crm`:
 
-```bash
-yarn twenty remote add --url http://192.168.1.50:3000 --as nas
-yarn twenty dev --remote nas
 ```
+node node_modules\twenty-sdk\dist\cli.cjs remote add --url http://192.168.1.50:3000 --as nas
+node node_modules\twenty-sdk\dist\cli.cjs dev --remote nas
+```
+
+(`yarn twenty remote add ...` if yarn is working on that machine; the node form is the fallback.)
 
 The app's `universalIdentifier` is unchanged from the local instance, so this creates the app
 fresh on the NAS rather than colliding with anything. The local instance can stay as a scratch
 environment: two remotes, sync to whichever you mean.
-
-## Ports
-
-3000 collides with a few NAS packages. If it is taken, set both `HOST_PORT` and the port inside
-`SERVER_URL` to something free, say 3010. They have to agree.
 
 ## Backups
 
@@ -91,32 +96,39 @@ The data lives in the `db-data` Docker volume, not in a share you can see in Fil
 up with a dump rather than by copying files:
 
 ```bash
-docker compose exec db pg_dump -U postgres default > tll-crm-$(date +%F).sql
+sudo docker compose exec db pg_dump -U postgres default > tll-crm-$(date +%F).sql
 ```
 
-Put that on a schedule in Task Scheduler once the instance holds anything real. Uploaded files
-live in the `server-local-data` volume and need their own copy.
+UGOS Pro has a Task Scheduler under Control Panel. Point a scheduled script at that once the
+instance holds anything real. Uploaded files live in the `server-local-data` volume and need their
+own copy.
 
 ## Upgrades
 
-`TAG=latest` is fine now and wrong later. Pin it to a released version before real data goes in,
+`latest` is fine now and wrong later. Pin the image to a released version before real data goes in,
 then upgrade deliberately:
 
 ```bash
-docker compose pull && docker compose up -d
+sudo docker compose pull && sudo docker compose up -d
 ```
+
+In the GUI: the Project's Update button, or pull the new image and recreate.
 
 Take a dump first. Migrations run automatically on server start and are not reversible.
 
 ## When it misbehaves
 
 **Signs in and bounces straight back out, or assets 404.** `SERVER_URL` does not match the URL in
-the address bar. Fix it and `docker compose up -d`.
+the address bar. Fix it and redeploy.
 
-**Server restarts in a loop.** Read `docker compose logs server`. Usually Postgres is not up yet
-(wait), or `PG_DATABASE_PASSWORD` has a character that broke the URL.
+**Server restarts in a loop.** Read the server logs. Usually Postgres is not up yet (wait), or the
+database password has a character that broke the URL, or the two copies of it do not match.
 
-**Works on the NAS, not from another machine.** NAS firewall. Allow the port on the LAN.
+**Works on the NAS, not from another machine.** UGOS firewall, under Control Panel, Security. Allow
+the port on the LAN.
+
+**Port 3000 refused.** Something else on the NAS has it. Change the published port on the left of
+`3000:3000` and the port in `SERVER_URL` together, then redeploy.
 
 **Do not expose this to the internet** by forwarding a port. It would be plain HTTP with client
 data behind it. When it needs to be reachable from outside, put it behind the reverse proxy with
