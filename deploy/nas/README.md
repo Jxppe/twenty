@@ -227,6 +227,42 @@ In the GUI: the Project's Update button, or pull the new image and recreate.
 
 Take a dump first. Migrations run automatically on server start and are not reversible.
 
+## Logic functions and SERVER_URL
+
+**If the CRM works but a logic function returns 500 with `ROUTE_TRIGGER_USER_UNCAUGHT_ERROR` and
+"fetch failed", this is why.**
+
+Logic functions run server-side and call back into Twenty's own API. The base URL they get is
+`SERVER_URL`, verbatim:
+
+`packages/twenty-server/src/engine/core-modules/logic-function/logic-function-executor/logic-function-executor.service.ts:418`
+
+So `SERVER_URL` has to be resolvable and reachable **from inside the container**, not only from a
+browser. A Tailscale `.ts.net` name is the case where these come apart: the browser resolves it
+through MagicDNS, and the Twenty container, which is not on the Tailscale network, cannot.
+
+Everything else keeps working, which makes it confusing: the UI loads, REST reads succeed, and only
+the code that runs server-side fails.
+
+Two fixes. Map the name to the node's Tailscale IP:
+
+```yaml
+    extra_hosts:
+      - "your-host.your-tailnet.ts.net:100.64.49.93"
+```
+
+Traffic then goes to that address on 443, where `tailscale serve` proxies it back to the local port.
+The certificate is valid for the name, so TLS verification passes.
+
+Or put Twenty inside the Tailscale container's network namespace, which gives it MagicDNS directly:
+
+```yaml
+    network_mode: container:tailscale
+```
+
+and drop the `ports:` block, since it no longer has a network of its own. Cleaner, at the cost of a
+start-order dependency between the two containers.
+
 ## When it misbehaves
 
 **Signs in and bounces straight back out, or assets 404.** `SERVER_URL` does not match the URL in
