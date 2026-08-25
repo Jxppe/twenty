@@ -1,5 +1,21 @@
 # Running TLL CRM in a Windows VM
 
+**Check this before anything else.** Docker Desktop runs Linux containers inside WSL2, which is a
+virtual machine, so a Windows VM needs CPU virtualization extensions passed through from the
+hypervisor underneath. Without them Docker Desktop refuses to start with "virtualisation support
+wasn't detected", and there is no way around it: Linux containers cannot run.
+
+Task Manager, Performance, CPU, bottom right: **Virtualization: Enabled**, or you are done here.
+
+If it says Disabled, look for a nested virtualization option on the VM in the hypervisor, enable it,
+and cold boot the VM. Most NAS virtual machine managers do not offer one. **If yours does not, run
+the container on the NAS host instead** (`deploy/nas/README.md`): one command, no Docker Desktop,
+no auto-login, no WSL, and the daemon is a system service that starts with the NAS.
+
+This whole document only applies if virtualization is exposed and you want the VM anyway.
+
+---
+
 The VM is a server, so the work is not installing Docker, it is making the thing come back on its
 own after a reboot. Windows fights you on that in three specific places.
 

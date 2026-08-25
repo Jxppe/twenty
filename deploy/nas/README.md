@@ -98,7 +98,9 @@ anywhere with nothing to change. Check with `tailscale status` before doing anyt
   Client-facing pages, when they exist, are a separate decision and want their own hostname.
 
 **A Windows VM is not a shortcut.** Docker there means Docker Desktop and WSL2 nested inside the
-NAS hypervisor. Run it on the NAS host instead.
+NAS hypervisor, which needs virtualization extensions passed through to the guest. Most NAS virtual
+machine managers do not expose them, and Docker Desktop then refuses to start outright. Run it on
+the NAS host.
 
 ### When to move off it
 
