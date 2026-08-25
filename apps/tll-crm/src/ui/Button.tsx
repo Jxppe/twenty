@@ -1,6 +1,8 @@
 import { type ComponentType, useState } from 'react';
 import { useTheme } from 'twenty-ui/theme-constants';
 
+import { brandAccent, brandAccentText } from 'src/constants/brand';
+
 type ButtonProps = {
   title: string;
   Icon?: ComponentType<{ size?: number; color?: string }>;
@@ -27,7 +29,7 @@ export const Button = ({
   const isPrimary = variant === 'primary';
 
   const background = isPrimary
-    ? theme.color.blue
+    ? brandAccent(theme)
     : isHovered
       ? theme.background.transparent.light
       : theme.background.primary;
@@ -47,7 +49,7 @@ export const Button = ({
           isPrimary ? 'transparent' : theme.border.color.medium
         }`,
         borderRadius: theme.border.radius.sm,
-        color: isPrimary ? theme.font.color.inverted : theme.font.color.secondary,
+        color: isPrimary ? brandAccentText(theme) : theme.font.color.secondary,
         cursor: isDisabled ? 'default' : 'pointer',
         display: 'inline-flex',
         fontFamily: theme.font.family,
@@ -64,7 +66,7 @@ export const Button = ({
       {Icon !== undefined && (
         <Icon
           size={14}
-          color={isPrimary ? theme.font.color.inverted : theme.font.color.tertiary}
+          color={isPrimary ? brandAccentText(theme) : theme.font.color.tertiary}
         />
       )}
       {title}

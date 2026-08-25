@@ -19,6 +19,7 @@ import {
   CHANNELS,
 } from 'src/constants/channels';
 import { INBOX_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER } from 'src/constants/universal-identifiers';
+import { brandAccent, brandAccentText } from 'src/constants/brand';
 import { Badge } from 'src/ui/Badge';
 import { Button } from 'src/ui/Button';
 import { FilterChips, type FilterChipOption } from 'src/ui/FilterChips';
@@ -382,11 +383,11 @@ const Inbox = () => {
                   style={{
                     alignSelf: isOutbound ? 'flex-end' : 'flex-start',
                     background: isOutbound
-                      ? theme.color.blue
+                      ? brandAccent(theme)
                       : theme.background.secondary,
                     borderRadius: theme.border.radius.md,
                     color: isOutbound
-                      ? theme.font.color.inverted
+                      ? brandAccentText(theme)
                       : theme.font.color.primary,
                     maxWidth: '70%',
                     padding: theme.spacing[2],
@@ -460,6 +461,7 @@ const Inbox = () => {
           ) : (
             <div
               style={{
+                alignItems: 'flex-start',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: theme.spacing[3],
