@@ -1,0 +1,170 @@
+import { defineObject, FieldType } from 'twenty-sdk/define';
+
+import {
+  CONVERSATION_CHANNEL_EMAIL_OPTION_ID,
+  CONVERSATION_CHANNEL_FACEBOOK_OPTION_ID,
+  CONVERSATION_CHANNEL_FIELD_UNIVERSAL_IDENTIFIER,
+  CONVERSATION_CHANNEL_INSTAGRAM_OPTION_ID,
+  CONVERSATION_CHANNEL_LINE_OPTION_ID,
+  CONVERSATION_CHANNEL_WEBCHAT_OPTION_ID,
+  CONVERSATION_CHANNEL_WHATSAPP_OPTION_ID,
+  CONVERSATION_EXTERNAL_ID_FIELD_UNIVERSAL_IDENTIFIER,
+  CONVERSATION_LAST_MESSAGE_AT_FIELD_UNIVERSAL_IDENTIFIER,
+  CONVERSATION_LAST_MESSAGE_PREVIEW_FIELD_UNIVERSAL_IDENTIFIER,
+  CONVERSATION_OBJECT_UNIVERSAL_IDENTIFIER,
+  CONVERSATION_STATUS_CLOSED_OPTION_ID,
+  CONVERSATION_STATUS_FIELD_UNIVERSAL_IDENTIFIER,
+  CONVERSATION_STATUS_OPEN_OPTION_ID,
+  CONVERSATION_STATUS_PENDING_OPTION_ID,
+  CONVERSATION_TITLE_FIELD_UNIVERSAL_IDENTIFIER,
+  CONVERSATION_UNREAD_COUNT_FIELD_UNIVERSAL_IDENTIFIER,
+} from 'src/constants/universal-identifiers';
+
+export default defineObject({
+  universalIdentifier: CONVERSATION_OBJECT_UNIVERSAL_IDENTIFIER,
+  nameSingular: 'conversation',
+  namePlural: 'conversations',
+  labelSingular: 'Conversation',
+  labelPlural: 'Conversations',
+  description: 'A thread of messages with one customer on one channel',
+  icon: 'IconMessages',
+  isSearchable: true,
+  labelIdentifierFieldMetadataUniversalIdentifier:
+    CONVERSATION_TITLE_FIELD_UNIVERSAL_IDENTIFIER,
+  fields: [
+    {
+      universalIdentifier: CONVERSATION_TITLE_FIELD_UNIVERSAL_IDENTIFIER,
+      type: FieldType.TEXT,
+      name: 'title',
+      label: 'Title',
+      description:
+        'Display name of the conversation, usually the customer name reported by the channel',
+      icon: 'IconAbc',
+    },
+    {
+      universalIdentifier: CONVERSATION_CHANNEL_FIELD_UNIVERSAL_IDENTIFIER,
+      type: FieldType.SELECT,
+      name: 'channel',
+      label: 'Channel',
+      description: 'Which messaging provider this conversation arrived on',
+      icon: 'IconAntenna',
+      defaultValue: "'LINE'",
+      options: [
+        {
+          id: CONVERSATION_CHANNEL_LINE_OPTION_ID,
+          value: 'LINE',
+          label: 'LINE',
+          position: 0,
+          color: 'green',
+        },
+        {
+          id: CONVERSATION_CHANNEL_FACEBOOK_OPTION_ID,
+          value: 'FACEBOOK',
+          label: 'Facebook',
+          position: 1,
+          color: 'blue',
+        },
+        {
+          id: CONVERSATION_CHANNEL_INSTAGRAM_OPTION_ID,
+          value: 'INSTAGRAM',
+          label: 'Instagram',
+          position: 2,
+          color: 'pink',
+        },
+        {
+          id: CONVERSATION_CHANNEL_WHATSAPP_OPTION_ID,
+          value: 'WHATSAPP',
+          label: 'WhatsApp',
+          position: 3,
+          color: 'turquoise',
+        },
+        {
+          id: CONVERSATION_CHANNEL_EMAIL_OPTION_ID,
+          value: 'EMAIL',
+          label: 'Email',
+          position: 4,
+          color: 'gray',
+        },
+        {
+          id: CONVERSATION_CHANNEL_WEBCHAT_OPTION_ID,
+          value: 'WEBCHAT',
+          label: 'Web chat',
+          position: 5,
+          color: 'purple',
+        },
+      ],
+    },
+    {
+      universalIdentifier: CONVERSATION_STATUS_FIELD_UNIVERSAL_IDENTIFIER,
+      type: FieldType.SELECT,
+      name: 'status',
+      label: 'Status',
+      description: 'Where the conversation sits in the handling workflow',
+      icon: 'IconProgressCheck',
+      defaultValue: "'OPEN'",
+      options: [
+        {
+          id: CONVERSATION_STATUS_OPEN_OPTION_ID,
+          value: 'OPEN',
+          label: 'Open',
+          position: 0,
+          color: 'green',
+        },
+        {
+          id: CONVERSATION_STATUS_PENDING_OPTION_ID,
+          value: 'PENDING',
+          label: 'Pending',
+          position: 1,
+          color: 'orange',
+        },
+        {
+          id: CONVERSATION_STATUS_CLOSED_OPTION_ID,
+          value: 'CLOSED',
+          label: 'Closed',
+          position: 2,
+          color: 'gray',
+        },
+      ],
+    },
+    {
+      universalIdentifier:
+        CONVERSATION_LAST_MESSAGE_AT_FIELD_UNIVERSAL_IDENTIFIER,
+      type: FieldType.DATE_TIME,
+      name: 'lastMessageAt',
+      label: 'Last message at',
+      description: 'Timestamp of the most recent message in the thread',
+      icon: 'IconClock',
+      isNullable: true,
+      defaultValue: null,
+    },
+    {
+      universalIdentifier:
+        CONVERSATION_LAST_MESSAGE_PREVIEW_FIELD_UNIVERSAL_IDENTIFIER,
+      type: FieldType.TEXT,
+      name: 'lastMessagePreview',
+      label: 'Last message',
+      // Denormalized so the conversation list renders from one query instead of
+      // one per thread.
+      description: 'Cached first line of the most recent message',
+      icon: 'IconMessage',
+    },
+    {
+      universalIdentifier: CONVERSATION_UNREAD_COUNT_FIELD_UNIVERSAL_IDENTIFIER,
+      type: FieldType.NUMBER,
+      name: 'unreadCount',
+      label: 'Unread',
+      description: 'Number of inbound messages not yet read by an agent',
+      icon: 'IconMailOpened',
+      defaultValue: 0,
+    },
+    {
+      universalIdentifier: CONVERSATION_EXTERNAL_ID_FIELD_UNIVERSAL_IDENTIFIER,
+      type: FieldType.TEXT,
+      name: 'externalId',
+      label: 'Provider thread ID',
+      description:
+        'Provider-side thread identifier, used to deduplicate incoming events',
+      icon: 'IconKey',
+    },
+  ],
+});

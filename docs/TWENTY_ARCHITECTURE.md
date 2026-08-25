@@ -223,6 +223,16 @@ Terraform-style diff; `yarn twenty app:publish --private` deploys a tarball to o
 
 ### 5.1 Shape
 
+There are **two products** on one platform, and the app boundary is what keeps them apart:
+
+- **Takdai** — the SaaS sold to small businesses: unified chat, easy for admins, AI assistance.
+- **TLL CRM** — internal to Thailiving Law, Unique X and Pattaya Notary. Not sold.
+
+Thailiving's workspace installs the Takdai apps *and* the TLL app; a Takdai customer installs only
+the first two and never sees anything legal. That is brief §28.6 ("the commercial product must remain
+industry-neutral") made structural rather than aspirational. It also has to be decided before the
+first `app:publish`, because an object cannot be moved between apps afterwards.
+
 ```
 Twenty (unmodified, upstream-tracking)
 │
@@ -246,17 +256,14 @@ Twenty (unmodified, upstream-tracking)
 │                payment-page (public HTML, PromptPay QR + bank transfer),
 │                verify-payment (cron or provider webhook)
 │
-└── app: thailiving-legal        ← installed only in the Thailiving workspace
+└── app: tll-crm                 ← installed only in the Thailiving workspace
       objects    Matter, PracticeArea, DocumentChecklist, …
+      scope      Thailiving Law, Unique X, Pattaya Notary
 ```
 
 Three apps, not one. The split is the brief's §15 modularity requirement made enforceable: a
-workspace that does not install `thailiving-legal` cannot see it, and generic code cannot
-accidentally depend on it.
-
-`takdai-sales` may start as a separate app or as part of the inbox app; splitting later is cheap
-because objects are addressed by `universalIdentifier`, but moving an object *between* apps is not.
-Decide before the first `app:publish`.
+workspace that does not install `tll-crm` cannot see it, and generic code cannot accidentally
+depend on it.
 
 ### 5.2 Where things live
 
@@ -360,10 +367,11 @@ The docs carry an explicit "under active development" warning.
 
 Consequences for the plan:
 
-- Budget for hand-built primitives (dropdown, combobox, modal, virtualized list) inside the sandbox,
-  or find a portal-free, observer-free component set. This is real work and the brief's §23
-  "use an existing component system rather than rebuilding basic UI primitives" partially cannot be
-  honoured inside front components.
+- `twenty-ui` covers the non-overlay half of the component problem (see §6.8), so this is narrower
+  than it first appears. But budget for hand-built **overlay** primitives — dropdown, combobox,
+  modal, tooltip — plus a virtualized list, all portal-free and observer-free. The brief's §23
+  "use an existing component system rather than rebuilding basic UI primitives" holds for buttons,
+  tags and typography, and does not hold for anything that floats above the page.
 - Prefer native Twenty surfaces wherever the data is record-shaped. A conversation *list* can be a
   Twenty view with filters, search, permissions and live SSE updates for free; only the message
   thread pane genuinely needs a front component. A hybrid Inbox (native list + front-component
@@ -429,16 +437,29 @@ boundaries* — an agent must not read another team's conversations — they nee
 predicates, which are Enterprise. Decide whether inbox scoping is a view convenience or an access
 control guarantee, and price accordingly.
 
-### 6.8 Design language: two systems, by construction
+### 6.8 Design language: better than expected, but only for the simple half
 
-Twenty's front uses Linaria (zero-runtime CSS-in-JS) with its own theme and `twenty-ui`. Front
-components cannot import `twenty-ui` — different runtime, sandboxed. Our components will be
-hand-styled with inline styles and unscoped CSS, and matching Twenty's look is on us. `useColorScheme()`
-from `twenty-sdk/front-component` exposes light/dark so at least theme-following is possible.
+`twenty-ui` **is** usable inside front components. It is MIT, bundled at build time, and the
+scaffolder wires it in by default. It gives us `Button`, `Tag`, `Status`, `Chip`, `Avatar`,
+`Callout`, `Banner`, the `H*Title`/`Label` typography set, and the full tree-shakeable `Icon*` set —
+all of which resolve their colours against the workspace's active light/dark theme automatically.
+`useTheme()` from `twenty-ui/theme-constants` returns Twenty's real design tokens (spacing, colours,
+radii, fonts) for our own inline styles, with no provider setup.
 
-This is a foreseeable "doesn't feel native" risk against §2 "one product experience". Extract a
-shared internal style module (tokens, primitives) early and use it in every front component, rather
-than styling each screen ad hoc.
+That substantially reduces the "doesn't feel native" risk against brief §2. Use `useTheme()` tokens
+everywhere instead of hard-coded hex values, and never hand-roll a component `twenty-ui` already
+ships.
+
+What it does **not** solve is the overlay half. `twenty-ui` depends on `@base-ui/react`, which
+portals its popovers, and portals render nothing in the sandbox (§6.2). So dropdowns, selects,
+comboboxes, dialogs and tooltips still need bespoke, portal-free implementations. Build those once
+in a shared internal module, styled from `useTheme()`, and reuse them across every front component.
+
+Import from subpaths (`twenty-ui/input`, not `twenty-ui`), and avoid `IconsProvider` / `useIcons` /
+`iconsState`, which pull in several MB of Tabler icons.
+
+Pin `twenty-ui` to the version the target Twenty instance ships (`1.0.0-alpha.1` today). It is
+alpha, so treat its API as unstable across Twenty upgrades.
 
 ### 6.9 Smaller frictions
 
@@ -496,22 +517,18 @@ Run `bash packages/twenty-utils/setup-dev-env.sh` and `yarn start` against an un
 Create a Thailiving Law workspace. Confirm custom objects, custom fields on `Person`, a saved view,
 role assignment, and the REST/GraphQL APIs by hand.
 
-**Milestone 2 — the fake Inbox, as a real spike.**
-`npx create-twenty-app takdai-inbox`, then:
+**Milestone 2 — the Inbox spike.** Built: `apps/takdai-inbox`. It ships the four omnichannel
+objects, a `conversations` relation on the standard `Person`, a `STANDALONE_PAGE` Inbox reached from
+a sidebar folder, a `Conversations` tab on `personRecordPage`, native record views over the same
+data, and a seed function so a fresh workspace has content.
 
-- `Conversation`, `Message`, `ContactIdentity` objects, with a `conversations` relation on `Person`
-- a `STANDALONE_PAGE` page layout with a `CANVAS` front-component widget
-- a `PAGE_LAYOUT` navigation menu item labelled "Inbox"
-- a `Conversations` tab on `personRecordPage`
-- hardcoded conversations, but **one real link to a real Twenty `Person`**
+It is a spike, not a mockup: it reads and writes real records through `RestApiClient` and carries a
+hand-rolled dropdown and an on-screen fetch-timing readout specifically to answer the sandbox
+questions. `apps/takdai-inbox/SPIKE.md` is the checklist to fill in while running it. Those answers
+decide how much of the Inbox stays a front component and how much becomes native views.
 
-Then answer, with evidence: does a dropdown render? does a 500-row list scroll acceptably? does
-keyboard navigation work? how far is the styling from native? how stale is polled data? Write the
-answers down — they decide how much of the Inbox is a front component versus native views.
-
-Commit as `prototype: add omnichannel inbox shell`.
-
-**Milestone 3 — real data.** Replace the fake data with the app's own objects, still no channel.
+**Milestone 3 — LINE-shaped data.** Replace the seed function with an ingest path, still no live
+channel: prove contact matching and the `ContactIdentity` → `Person` resolution.
 
 **Milestone 4 — LINE OA.** `serverRouteTriggerSettings` resolver + per-tenant handler, prove
 `LINE → Inbox → Person → reply → LINE`.
