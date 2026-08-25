@@ -3,6 +3,18 @@
 A toolbox of solved problems, not a dependency list. Consult this before implementing any
 substantial feature.
 
+**Read this in light of [`DECISIONS.md`](./DECISIONS.md).** Two decisions changed what most of this
+list is for:
+
+- **D4** moved Takdai out of this repository. Everything filed under omnichannel, CMS, SEO and
+  analytics is now reference material for a product built elsewhere, not near-term work here.
+- **D3** kept us on Twenty plus FlowAccount instead of moving to ERPNext. The Frappe entries below
+  record what that decision was weighed against.
+
+Licence discipline does not relax under D4. Our network users are now our own staff, so AGPL §13 is
+near-toothless, but copied AGPL code still makes our source AGPL, and this codebase is intended to
+stay ours.
+
 **Licences below were verified against each repository's own page in August 2026.** Re-check before
 copying any code: projects relicense, and a `LICENSE` file at the repo root does not always cover
 every directory.
@@ -44,7 +56,9 @@ interfaces may stay proprietary; modifying Twenty's source triggers AGPL §13 in
 `twenty-client-sdk`, `twenty-shared`, `twenty-ui` and `packages/twenty-apps` are MIT.
 
 **Risk:** 314 files marked `/* @license Enterprise */` need a paid subscription in production, and
-they cover billing, SSO, row-level permissions and audit logs.
+they cover billing, SSO, row-level permissions and audit logs. Under D4 none of these are required:
+no billing, no SSO mandate, and timeline activities cover operational history. **Row-level
+permissions are the one that may still bite**: matter confidentiality is a real use for them (O7).
 
 ### Relaticle
 `relaticle/relaticle` · Laravel, Filament, Livewire, PostgreSQL · **AGPL-3.0**
@@ -55,8 +69,12 @@ only for how it shapes CRM operations as agent tools. Wrong stack for us, and AG
 ### Frappe CRM
 `frappe/crm` · Frappe Framework (Python), Vue 3 · **AGPL-3.0**
 
-**REFERENCE**, low priority. Notable for having WhatsApp and telephony built in, so worth a look at
-how they model channel conversations against deals. Wrong stack, AGPL, no code reuse.
+**REFERENCE.** Evaluated seriously as a Twenty replacement and rejected under D3. Notable for having
+WhatsApp and telephony built in, so worth a look at how they model channel conversations against
+deals. AGPL, so no code reuse.
+
+**Why not adopted:** it is a CRM, not the ERP, so choosing it would still have meant ERPNext
+alongside for accounting, and then the stack decision is really the ERPNext one below.
 
 ### Comp AI CRM
 `trycompai/crm` · Next.js, NestJS, tRPC, Prisma, Bun · **MIT**
@@ -68,7 +86,100 @@ responding to prompts. Genuinely relevant to our AI assistance goals, and MIT so
 
 ---
 
+## ERP, accounting and Thai tax
+
+The stack question that D3 settled. Kept in full because it was close, and because the reversal
+condition is written into D3.
+
+### FlowAccount — the accounting system of record
+`flowaccount.com` · Thai SaaS, closed source · **Commercial, ~300 THB/month**
+
+**SERVICE.** Owns the ledger, statutory accounting, VAT, withholding tax and official reports. We
+push customers, invoices and payments over its API and read status back. We never mirror the ledger.
+
+CONFIRMED with the vendor: **the API is available on any package**, so no plan upgrade is needed to
+integrate.
+
+**Why a paid Thai SaaS beats building it:** being correct about Thai tax is its whole job, and it is
+the cheapest correctness available. Nothing we build competes with a product whose vendor tracks
+Revenue Department changes for us.
+
+**Open, ask support (O2 adjacent):** whether the three legal entities need three subscriptions and
+three sets of API credentials, or one account covers them. This changes the shape of the accounting
+provider interface, not whether we use it.
+
+**Risk:** closed source and Thailand-only, so there is no self-host escape hatch. Mitigated by
+putting it behind an accounting provider interface with `None` as a valid implementation, so the
+system still works if the connection breaks.
+
+### ERPNext
+`frappe/erpnext` · Frappe Framework (Python), Vue, MariaDB · **GPL-3.0**
+
+**REFERENCE.** The road not taken (D3), and the strongest alternative considered.
+
+*What it genuinely offered:* multi-company with separate legal entities as a first-class concept,
+which is exactly the TLL / Unique X / Pattaya Notary problem. HRMS that could have absorbed TLLACC.
+Quotations, invoices, projects and timesheets already built.
+
+*Why not:* **Frappe's PostgreSQL support is experimental** and MariaDB is the production database,
+against a stated PostgreSQL preference. Omnichannel would have been custom work in either stack (see
+ClefinCode below), which was the deciding factor. And maintainability matters more than feature
+count for a small team: TypeScript and React is a stack this team moves fast in.
+
+**Risk if reconsidered:** GPL-3.0 on the server, and an app built on Frappe is a Frappe app. Migrating
+back out is not cheap. Read D3's reversal condition before reopening this.
+
+### erpnext_thailand
+`ecosoft-frappe/erpnext_thailand` · Frappe app (Python) · **MIT**
+
+**REFERENCE**, and the most valuable domain reference in this document for Thai finance.
+
+Ecosoft's Thai localization implements, in working code: service VAT with the tax point on payment,
+withholding tax certificates, PND reports, deposit invoicing, Thai amount-in-words, and BOT exchange
+rates.
+
+**MIT, so the code is legally reusable**, but it is Frappe-coupled Python, so the reuse is
+conceptual. Read it for *what the rules actually are* before implementing anything tax-adjacent. It
+is documentation of Thai statutory requirements that happens to compile.
+
+### ClefinCode Chat
+`clefincode/clefincode_chat` · Frappe app · **MIT**
+
+**REFERENCE**, and the entry that decided D3.
+
+Omnichannel for ERPNext. VERIFIED: WhatsApp, Telegram, Instagram and Messenger, **no LINE**, and it
+reads as team chat with document linking rather than a shared agent inbox.
+
+**Why it matters:** if it had closed the omnichannel gap, ERPNext would have won on features alone.
+It does not, so omnichannel is custom work in either stack, and the stack choice fell back to
+maintainability.
+
+---
+
+## Scheduling
+
+### Cal.com
+`calcom/cal.com` · Next.js, TypeScript, Prisma, PostgreSQL · **AGPL-3.0** (commercial licence available)
+
+**REFERENCE**, leaning against adoption (O6). The obvious answer to the client-facing booking page.
+
+*Why lean build instead:* the rules here are simple: a handful of staff, fixed consultation lengths,
+office hours, Thai public holidays. Cal.com's value is mostly in complexity this firm does not have
+(round-robin teams, payment collection, dozens of integrations), and adopting it means either a
+second deployed service with its own user model, or an AGPL dependency, or a commercial licence.
+
+*What to read it for anyway:* availability computation is the part people underestimate. Buffers,
+minimum notice, timezone handling and double-booking prevention are all solved there. Read the
+availability logic before writing ours.
+
+**Risk:** AGPL-3.0. Fine to deploy as a separate service, never to copy from.
+
+---
+
 ## Omnichannel and communication
+
+**Takdai's problem now, not this repository's** (D4). Kept because TLL will be Takdai's first user,
+so the domain thinking still has to be right, and because whoever builds it will start here.
 
 ### Chatwoot — the primary reference
 `chatwoot/chatwoot` · Ruby on Rails, Vue.js, PostgreSQL · **MIT**
@@ -91,9 +202,9 @@ problem. That violates the single-source-of-truth rule.
 clients rather than the official Cloud API.
 
 **Risk, and it is disqualifying:** unofficial WhatsApp clients violate Meta's terms and get numbers
-banned. For a commercial SaaS handling customers' business accounts, that liability is unacceptable.
-Use the official WhatsApp Business Cloud API. The NestJS webhook and queue structure is worth
-skimming.
+banned. Losing the firm's WhatsApp number is a business outage, and for Takdai, handling customers'
+business accounts that way is an unacceptable liability. Use the official WhatsApp Business Cloud
+API. The NestJS webhook and queue structure is worth skimming.
 
 ### 9router
 `decolua/9router` · Next.js, Node.js · **MIT**
@@ -363,16 +474,35 @@ project.
 
 ## Summary
 
-**Adopt now (2):** Taste Skill, Google DESIGN.md format — both Claude Code tooling, both permissive.
+Grouped by what this repository does next, not by category.
 
-**Evaluate soon (2):** Coolify for deployment, pdfcn for document output.
+**Load-bearing for TLL CRM (3)**
 
-**Read before building (4):** Chatwoot before the inbox, Midday before finance UI, Twenty's own
-`document-generator` example before quotations, Claude Cookbooks before AI features.
+| Project | Verdict | Why |
+| --- | --- | --- |
+| Twenty | DIRECT | The chassis. Apps only, never the source. |
+| FlowAccount | SERVICE | The ledger. API confirmed on any package. |
+| erpnext_thailand | REFERENCE | Read before implementing anything tax-adjacent. MIT, Frappe-coupled. |
 
-**Rejected with reasons (4):** OpenWA (terms-of-service risk), Logto and Authentik (duplicate
-Twenty's identity model), Fluent UI (conflicting design system).
+**Adopt now (2):** Taste Skill, the Google DESIGN.md format. Both Claude Code tooling, both
+permissive.
 
-**Miscategorized in the brief (2):** 9router and Hermes WebUI are not omnichannel projects.
+**Evaluate soon (3):** pdfcn for quotation and invoice output · Coolify for deployment · Cal.com's
+availability logic before writing our own booking engine.
 
-**Parked (rest):** CMS, SEO, marketing, document intelligence, developer tooling.
+**Read before building (5):** Twenty's own `document-generator` example before the client-facing
+pages · Midday before finance UI · erpnext_thailand before Thai tax · Claude Cookbooks before the AI
+qualification agent · Chatwoot before any inbox.
+
+**Weighed and rejected, with the reasoning in D3 (3):** ERPNext, Frappe CRM, ClefinCode Chat. The
+accounting provider sits behind an interface precisely so D3 stays cheap to reverse.
+
+**Rejected on their own merits (4):** OpenWA (terms-of-service risk) · Logto and Authentik
+(duplicate Twenty's identity model) · Fluent UI (conflicting design system).
+
+**Miscategorized in the original brief (2):** 9router and Hermes WebUI are not omnichannel projects.
+
+**Takdai's, not ours (D4):** Chatwoot, the channel gateways, and everything under CMS, SEO and
+analytics.
+
+**Parked (rest):** document intelligence, marketing tooling, developer tooling.

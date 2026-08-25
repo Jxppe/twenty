@@ -8,13 +8,14 @@ Read [`FINANCE.md`](./FINANCE.md) first for where payments sit in the invoice li
 
 ## 1. Principles
 
-**Per-organization configuration, always.** Bank accounts, PromptPay identifiers, account names and
-payment instructions belong to each SaaS organization. No Thailiving bank detail may ever appear in
-generic code, a seed, a fixture or a test.
+**Per-entity configuration, always.** Bank accounts, PromptPay identifiers, account names and payment
+instructions belong to a `BillingEntity` — Thailiving Law, Unique X Services or Pattaya Notary. Each
+has its own receiving accounts, and a payment request must present the one matching the invoice's
+entity. No bank detail may ever appear in code, a seed, a fixture or a test.
 
-**Thailand-first, not Thailand-only.** PromptPay and Thai bank transfer are the first two methods,
-not the only two. The model is a payment-method interface with Thai implementations first, so that
-Stripe, PayPal or a regional provider slots in without reshaping the invoice.
+**Thailand only, in practice.** The clients are in Thailand and pay by PromptPay or bank transfer.
+Keep the payment method behind an interface so a card processor can be added, but do not build for
+markets this firm does not serve.
 
 **The customer's bank is not our bank.** The Thai transfer flow asks which banking app the *payer*
 uses, purely to give them the right instructions and deep link. The receiving account is ours and
@@ -24,9 +25,9 @@ usually at a different bank. Getting this backwards is the most common mistake i
 
 ## 2. Model
 
-### OrganizationPaymentSettings
+### PaymentSettings
 
-Per workspace, configured in app settings, never in code.
+**Per `BillingEntity`**, configured in app settings, never in code. Three sets of these.
 
 | Field | Notes |
 | --- | --- |

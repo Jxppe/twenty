@@ -2,6 +2,9 @@
 
 Status: **PROPOSED**. Nothing here is implemented.
 
+Read [`DECISIONS.md`](./DECISIONS.md) D2 and D3 first, and [`MATTERS.md`](./MATTERS.md) for what a
+matter is.
+
 ---
 
 ## 1. What this is, and what it is not
@@ -41,15 +44,20 @@ provider owns it. We hold an operational view and push facts to the provider.
 | `category` | |
 | `isActive` | Retire without deleting; historical line items must keep resolving |
 
+All documents carry a **required** `billingEntity` (D2). It names the legal party to the contract,
+so it is neither optional nor a category. It defaults down the chain
+(channel → matter → quotation → invoice) and can be overridden at any step.
+
 ### Quotation
 
 | Field | Notes |
 | --- | --- |
-| `number` | Human reference, per-organization sequence |
+| `number` | Human reference, per-entity sequence |
 | `status` | `DRAFT` / `SENT` / `ACCEPTED` / `DECLINED` / `EXPIRED` |
 | `validUntil` | |
 | `subtotal`, `discount`, `tax`, `total` | Stored, not computed on read: a sent quotation must never change because a product price did |
-| `opportunity` | Relation to Twenty's `Opportunity` |
+| `matter` | Relation to the matter this quotes for |
+| `billingEntity` | **Required.** Which of the three companies is contracting |
 | `person`, `company` | Relations to Twenty records |
 | `pdf` | `FILES` field |
 
@@ -145,11 +153,16 @@ type AccountingProvider = {
 };
 ```
 
-Providers: `None` (default), **`FlowAccount`** (committed: Thailiving is purchasing it and we will
-integrate its API), then PEAK, Xero, QuickBooks as demand appears.
+Providers: `None` (default) and **`FlowAccount`**. Others only if the firm ever changes accountant.
 
-FlowAccount is confirmed rather than speculative, so the first implementation is real work with a
-real API contract, not a placeholder. That does not change rule 1 below.
+**CONFIRMED: the FlowAccount API works on any package**, so no plan upgrade is needed to integrate.
+At roughly 300 baht a month per company this is the cheapest correctness in the system: their job is
+being right about Thai tax, and ours is not.
+
+**Open (see `DECISIONS.md` O-list):** whether one subscription covers all three companies or each
+needs its own, and whether one API credential spans them. That determines whether credentials are
+stored per `BillingEntity` or once for the workspace. Ask FlowAccount support before building the
+connector.
 
 Three rules:
 

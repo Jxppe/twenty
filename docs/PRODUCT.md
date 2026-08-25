@@ -1,16 +1,21 @@
 # Master Product & Development Brief — CRM + Omnichannel Business Platform
 
-> **Reading guide.** This is the master product brief, the canonical statement of what we are
-> building. It is kept as written rather than summarized elsewhere, so there is one source of truth.
+> **Status: HISTORY. Read this for context, not for direction.**
 >
-> - **Customer lifecycle** — §26 (MVP) and §9 (sales workflow):
->   `Enquiry → Conversation → CRM Contact → Lead/Deal → Quotation → Invoice → Payment → Completed`
-> - **Commercial positioning and Thailand-first strategy** — §2 and §29
-> - **Development order** — §27
-> - **Rules for coding agents** — §28, restated operationally in `/CLAUDE.md`
+> This brief describes **Takdai**, the commercial multi-tenant SaaS. Under
+> [D4](./DECISIONS.md#d4--takdai-is-a-separate-product-built-outside-this-repository) Takdai is a
+> separate product built outside this repository, so nothing here is a requirement on this codebase.
 >
-> How this is being built is in [`ARCHITECTURE.md`](./ARCHITECTURE.md); what the Twenty foundation
-> actually provides is in [`TWENTY_ARCHITECTURE.md`](./TWENTY_ARCHITECTURE.md).
+> **This repository is TLL CRM**: the internal practice management system for Thailiving Law,
+> Unique X Services and Pattaya Notary. For what is actually being built, read
+> [`DECISIONS.md`](./DECISIONS.md), then [`MATTERS.md`](./MATTERS.md), then
+> [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+>
+> It is kept unedited because the domain thinking behind it (the customer lifecycle in §26 and §9,
+> the omnichannel model, the Thailand-first positioning in §2 and §29) is what Takdai will be built
+> from, and rewriting it in place would destroy the record of what was originally asked for.
+>
+> Where this document and `DECISIONS.md` disagree, `DECISIONS.md` wins.
 
 ---
 

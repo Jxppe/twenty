@@ -92,10 +92,15 @@ The commercial terms (`/LICENSE` ~line 726) permit copying and modifying these *
 testing without a subscription**, but production use requires a valid Enterprise subscription for
 the correct host and seat count, and forbids redistribution.
 
-**Action required:** decide early whether we run Twenty EE (subscription) or build subscription
-billing and row-level permissions ourselves outside the Enterprise files. This affects the pricing
-model and should not be discovered at launch. Get written clarification from Twenty on what an
-Enterprise subscription costs for a multi-tenant reseller-style deployment.
+**RESOLVED by D4.** As an internal single-firm system we need none of it: no subscription billing, no
+SSO requirement, no usage metering. The community edition suffices.
+
+**One flag remains (O7):** row-level permission predicates are Enterprise, and matter
+confidentiality is a genuine use for them. Revisit if it bites.
+
+The AGPL §13 exposure is also now small: our network users are our own staff, so offering them the
+source costs nothing. Core modification remains discouraged for **upgrade** reasons (D1), not
+commercial ones.
 
 ---
 
@@ -346,8 +351,28 @@ Options:
 3. **Ship Thai only in our own UI surfaces** and leave Twenty's chrome in English. Front components
    can carry their own strings independent of Lingui. Ugly for a Thai law firm's staff.
 
-Recommendation: (1), with (2) as the interim while the PR lands. Verify PO-file plumbing on both
-front and server before promising Thai in a demo.
+**DECIDED (D8): a Thai UI is a requirement, and it is one line plus a partial catalogue.**
+
+Option 3 is rejected: staff read the whole application, not just our screens, so English chrome with
+Thai panels is worse than either extreme.
+
+Adding `th-TH` is **one line** in `AppLocales.ts` (MIT package, no licence consequence). Everything
+else derives: the locale picker, validation and `dynamicActivate` all read from that constant.
+
+The cost is translation, not code: 3,931 strings in the front, 2,158 in the server, 67 in emails.
+**Lingui falls back to the English source for missing entries, so a partial catalogue works.**
+Translate the few hundred strings staff read daily, ship it, and grow the catalogue from use. Nothing
+breaks while it is incomplete.
+
+Do option 1 first: contribute the locale upstream, because it removes the divergence entirely. Carry
+option 2 meanwhile.
+
+Two consequences worth knowing before this lands:
+
+- App translations are typed `Partial<Record<AppLocale, ...>>`, so **our app can ship Thai strings
+  only once the platform knows the locale**. This is the gating item for any Thai string we write.
+- The client-facing quotation, payment and booking pages are our own HTML and were never affected by
+  `AppLocales`. They can be bilingual today.
 
 ### 6.2 The front-component sandbox will not run shadcn/ui — conflicts with §23
 
@@ -624,6 +649,36 @@ Consequences:
 
 Decide which is needed: Thai **message text** search (solvable in our app) or Thai **contact name**
 search in the CRM (needs the Postgres extension).
+
+### Additional verified findings
+
+Established after the first audit pass, and load-bearing for [`MATTERS.md`](./MATTERS.md).
+
+**Calendar views are native.** `ViewType` includes `CALENDAR` and `CALENDAR_WIDGET`, with
+`ViewCalendarLayout` of `DAY` / `WEEK` / `MONTH`. Any object with a date field renders on a calendar,
+as a full view or a dashboard widget. **Group and per-staff calendars are view configuration, not
+custom UI.** This removes what looked like the most expensive part of the booking feature.
+
+**Twenty can create calendar events**, not only sync them: a `create-calendar-event` workflow action
+exists at `modules/workflow/workflow-executor/workflow-actions/create-calendar-event/`. So confirmed
+bookings can be pushed to staff Google Calendars.
+
+**But `CalendarEvent` is a sync mirror, not a booking record.** It carries `iCalUid`,
+`externalCreatedAt`, `externalUpdatedAt` and `calendarChannelEventAssociations`. Same trap as
+`Message` for omnichannel. Own a `Booking` object instead (D5).
+
+**Standard object labels are editable.** `updateObject` accepts `labelSingular`, `labelPlural`,
+`nameSingular`, `icon` and `isActive`, with no guard restricting standard objects. So Twenty's sales
+vocabulary can be reshaped into a law firm's through configuration alone.
+
+**But `nameSingular` is the API contract.** Renaming `opportunity` breaks `/rest/opportunities`.
+There is an `isLabelSyncedWithName` flag that keeps label and name in step by default; **turn it off
+on anything relabelled** (D6).
+
+**Tasks are real work items.** `Task` has `title`, `dueAt`, `status`, `assignee`, attachments and
+timeline activities. `TaskTarget` is polymorphic with `targetPerson`, `targetCompany`,
+`targetOpportunity` **and a `custom` slot**, so tasks attach to our own objects. No need to build a
+work-item type.
 
 ### Windows toolchain findings
 

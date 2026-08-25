@@ -3,6 +3,8 @@
 /.idea
 .claude/*
 !.claude/settings.json
+# our project skills are documentation, not local agent state
+!.claude/skills/
 .cursor/debug-*.log
 **/**/node_modules/
 .cache

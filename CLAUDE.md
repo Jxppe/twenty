@@ -4,80 +4,100 @@ Permanent instructions for coding agents on this repository.
 
 ## What this is
 
-A commercial multi-tenant SaaS built on Twenty CRM. Two products share the platform:
+**TLL CRM**: the internal practice management system for Thailiving Law, Unique X Services and
+Pattaya Notary. One firm, three legal entities, shared clients, one Twenty workspace.
 
-- **Takdai** — the SaaS sold to small businesses: CRM, omnichannel inbox, sales, Thai payments.
-- **TLL CRM** — internal to Thailiving Law, Unique X and Pattaya Notary. Not sold.
+It is a **system of work**, not a sales pipeline. Staff open it to see what is happening with a
+client, what is blocking, and what is next.
 
-Thailiving is customer #1 and the first real testing environment. **The commercial product must
-never assume its customer is a law firm.**
+**Takdai is a different product, built in a different repository.** Nothing here needs to be
+industry-neutral. Law-firm concepts are first-class.
 
 ## Read before changing architecture
 
 | Document | When |
 | --- | --- |
-| `docs/PRODUCT.md` | The master brief. Product vision and lifecycle |
+| `docs/DECISIONS.md` | **First.** Why things are the way they are, and what would reverse them |
 | `docs/ARCHITECTURE.md` | Domain boundaries and ownership. Before any structural decision |
-| `docs/TWENTY_ARCHITECTURE.md` | What Twenty actually provides, VERIFIED vs PROPOSED |
-| `docs/REFERENCES.md` | Before implementing any major feature |
-| `docs/OMNICHANNEL.md` | Conversations, messages, channels |
-| `docs/FINANCE.md` | Products, quotations, invoices |
+| `docs/MATTERS.md` | Matters, deadlines, documents, bookings, work logs. The core of the product |
+| `docs/TWENTY_ARCHITECTURE.md` | What Twenty actually provides, VERIFIED / MEASURED / PROPOSED |
+| `docs/FINANCE.md` | Quotations, invoices, FlowAccount |
 | `docs/PAYMENTS.md` | PromptPay, Thai bank transfer |
+| `docs/OMNICHANNEL.md` | The messaging model. Owned by Takdai, kept here for the CRM contract |
+| `docs/REFERENCES.md` | Before implementing any major feature |
 | `DESIGN.md` | Any UI work |
+| `docs/PRODUCT.md` | The original brief. Describes Takdai, so read it as history |
 
-Skills in `.claude/skills/` carry the same rules in short form: `twenty-extension`, `omnichannel`,
-`thai-payments`, `finance`, `saas-ui`.
+Skills in `.claude/skills/` carry the same rules in short form.
 
 ## Rules
 
-**1. Do not modify Twenty's source.** Product code lives in an app under `apps/`, never in
-`packages/twenty-server` or `packages/twenty-front`. This is a licensing constraint, not a
-preference: Twenty is AGPL-3.0 with an Application Exception, and modifying it triggers §13, which
-obliges us to publish source to every network user of the hosted product. Before proposing a change
-under `packages/`, say which extension point you checked and why it does not work.
+**1. Do not modify Twenty's source.** Product code is a Twenty app under `apps/`, never
+`packages/twenty-server` or `packages/twenty-front`. The reason is now upgrade cost rather than
+licensing: Twenty moves fast and every core edit is a permanent merge conflict. Before proposing a
+change under `packages/`, say which extension point you checked and why it does not work.
 
-**2. Inspect Twenty before building a replacement.** It already provides contacts, companies,
-opportunities, pipelines, tasks, notes, timelines, custom objects and fields, views, permissions,
-workspaces, REST/GraphQL/MCP APIs, webhooks, a workflow engine, file storage, search, AI agents and
-Stripe billing. Check the source; do not assume.
+The one accepted exception is adding `th-TH` to `AppLocales.ts` (D8): one line, MIT package,
+contributed upstream first.
 
-**3. Preserve upstream compatibility.** Track `upstream/main` continuously. Prefer contributing a
-change upstream over carrying a patch. Record any unavoidable divergence in
-`docs/TWENTY_ARCHITECTURE.md` under upgrade risks.
+**2. Inspect Twenty before building a replacement.** It provides contacts, companies, tasks with
+assignees and due dates, polymorphic task targets, notes, timeline activity, custom objects and
+fields, calendar views, permissions, workflows, REST/GraphQL/MCP APIs, webhooks, file storage and AI
+agents. Check the source; do not assume.
 
-**4. Keep generic and Thailiving-specific code apart.** Nothing in a Takdai app may reference a legal
-concept, a Thailiving entity, or a specific bank account. Law-firm functionality goes in `tll-crm`,
-installed only in that workspace.
+**3. Relabel, do not rename.** Change `labelSingular` / `labelPlural` / `icon` to make the UI read as
+a law firm. Never change `nameSingular`: it is the API contract. Turn off `isLabelSyncedWithName` on
+anything relabelled.
 
-**5. Consult `docs/REFERENCES.md` before implementing anything substantial.** Reference projects are
-not dependencies. For each one decide: DIRECT, SERVICE, LIBRARY, REFERENCE, or IGNORE.
+**4. Model work, not pipeline.** A record page leads with what is blocking and what is due. Amount
+and probability are not the point. If a field only supports a sales forecast, it does not belong on
+the page.
 
-**6. Check the licence before reusing code.** MIT, Apache-2.0, BSD and Unlicense are safe.
-**AGPL-3.0 code must never be copied into our product** — it makes the product AGPL and forces
-source disclosure. Read AGPL projects for patterns and write our own. Ideas are not copyrightable;
-source is.
+**5. The UI must be able to switch to Thai.** Staff read the whole application, so English chrome
+with Thai panels is not an answer. Lingui falls back to the English source, so a partial catalogue
+ships fine and grows from use. Quotations, invoices and email stay mostly English; Thai is what
+clients write to us in. See D8.
 
-**7. Avoid unnecessary dependencies.** Twenty already ships a design system (`twenty-ui`), an icon
-set, a queue, file storage and a workflow engine. A new framework or library needs a written
-justification.
+**6. Preserve upstream compatibility.** Track `upstream/main`. Prefer contributing a change upstream
+over carrying a patch. Record unavoidable divergence in `docs/TWENTY_ARCHITECTURE.md` under upgrade
+risks.
 
-**8. Maintain domain ownership.** CRM owns people, companies, deals, pipelines, tasks, activities.
-Omnichannel owns channel accounts, contact identities, conversations, messages, inbox state,
-assignment. Sales owns products, quotations, invoices, payment requests. Payments owns PromptPay,
-bank transfer, payment status and verification. External accounting owns the ledger, statutory
-accounting and tax. **We are not building an ERP.**
+**7. Check the licence before reusing code.** MIT, Apache-2.0, BSD and Unlicense are safe. AGPL-3.0
+code must not be copied into our app: read it for patterns and write our own. Ideas are not
+copyrightable; source is.
 
-**9. One source of truth.** A conversation points at a `Person`; it never copies contact fields. An
-invoice holds an external reference to the accounting provider; it never mirrors their ledger. If
-two places can disagree, the design is wrong.
+**8. Avoid unnecessary dependencies.** Twenty ships a design system (`twenty-ui`), an icon set, a
+queue, file storage and a workflow engine. A new library needs a written justification.
 
-**10. Do not over-abstract.** Build interfaces where multiple implementations are genuinely expected
-— channels, payment methods, accounting providers. Not for CRUD.
+**9. Maintain domain ownership.** CRM owns people and companies. Practice owns matters, deadlines,
+documents, bookings, work logs. Sales owns quotations and invoices. Payments owns PromptPay and bank
+transfer. **FlowAccount owns the ledger, statutory accounting and tax.** We are not building an ERP.
+
+**10. One source of truth.** An invoice holds an external reference to FlowAccount; it never mirrors
+their ledger. If two places can disagree, the design is wrong. Watch this especially where TLLACC
+overlaps.
+
+**11. Do not over-abstract.** Interfaces where multiple implementations are genuinely expected:
+channels, payment methods, accounting providers. Not for CRUD.
+
+## Gotchas that have already cost time
+
+- **`package.json` is a shared contract with the server.** It builds the logic-function dependency
+  layer by running `yarn install` against it in a bare container. Nothing in that file may reference
+  a local path the server does not copy, or every logic function fails with
+  `ROUTE_TRIGGER_PLATFORM_ERROR`.
+- `theme.spacing` is a token record: `theme.spacing[2]`, not `theme.spacing(2)`.
+- Import enums from `twenty-sdk/define`, not `twenty-shared/types`.
+- `navigate()` takes an `AppPath` enum member with named params, not a URL.
+- Front components are sandboxed: no portals, no `ResizeObserver`, no canvas, no realtime.
+- Twenty cannot index Thai text (`to_tsvector('simple', ...)`). Search Thai names in our own
+  screens with `contains` filters, not through the search endpoint.
+- `th-TH` is not in `AppLocales.ts`, and app translations are typed `Partial<Record<AppLocale, ...>>`,
+  so no Thai string can ship from an app until the locale exists.
 
 ## Working style
 
-- Verify claims against the source and say which file you read. Distinguish what you verified from
-  what you are proposing.
+- Verify claims against the source and say which file you read. Distinguish verified from proposed.
 - Prefer the smallest change that answers the question. Prototypes exist to produce evidence.
 - Record findings in the relevant document, not just in chat.
 

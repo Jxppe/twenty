@@ -1,265 +1,254 @@
-# Omnichannel Architecture
+# Omnichannel
 
-The normalized messaging model and the adapter boundary. Status: the core objects are **BUILT** in
-`apps/takdai-inbox`; everything about providers is **PROPOSED** and not implemented.
+Status: **PROPOSED**, and **not this repository's near-term work**.
+
+Under D4, Takdai is a separate product built elsewhere and owns the omnichannel layer. This document
+is kept here for two reasons: the domain model is hard-won and transfers unchanged to whatever builds
+it, and TLL will be its first user, so the **contract** between the messaging layer and the CRM has
+to be right.
+
+Built so far: `apps/takdai-inbox`, a prototype that proved the Twenty extension path. See
+[`TWENTY_ARCHITECTURE.md`](./TWENTY_ARCHITECTURE.md) §9b for what it established.
 
 ---
 
-## 1. The one rule
+## 1. The split
+
+**Takdai owns the conversation. The CRM owns the client. The link is one ID pointing one direction.**
+
+```
+LINE / WhatsApp / Messenger / Instagram / webchat / email
+        │
+        ▼
+  Takdai adapter          normalizes to a provider-free event
+        │
+        ▼
+  Takdai database         Conversation, Message, ContactIdentity
+        │
+        ▼
+  AI qualification        is this a real enquiry?
+        │
+   ┌────┴────┐
+  no        yes
+   │          │
+stays in    CRM REST API:
+Takdai        create Person
+(no CRM       create Matter
+ record)      store crmPersonId + crmMatterId on the Takdai conversation
+                │
+                ▼
+         staff notified, then:
+           book consultation · issue quotation · issue invoice
+```
+
+Two rules that keep this clean:
+
+**Only create a CRM record when the enquiry qualifies.** Otherwise every wrong number and spam
+message becomes a contact, and the CRM rots within a month.
+
+**Never mirror.** Takdai stores `crmPersonId` and reads the rest from the CRM when it needs it. The
+CRM never learns what LINE is.
+
+---
+
+## 2. The one rule inside Takdai
 
 **No provider-specific logic outside an adapter.**
 
-Nothing downstream of the adapter boundary may know what LINE is. If `grep -ri "line\|meta\|whatsapp"`
-turns up matches in the conversation engine, the inbox UI, the CRM linkage or the automation layer,
-the boundary has leaked and the next channel will cost as much as the first.
-
 ```
-Provider          Channel Adapter        Normalized Event      Conversation Engine     Inbox      CRM
-────────          ───────────────        ────────────────      ───────────────────     ─────      ───
-LINE      ──┐
-Messenger ──┤
-Instagram ──┼──►  verify signature  ──►  InboundMessage   ──►  upsert identity    ──►  render ──► Person
-WhatsApp  ──┤     parse payload           (provider-free)      upsert conversation                Opportunity
-Email     ──┤     map to normal form                           append message
-Web chat  ──┘     resolve tenant                               update inbox state
+Provider → Channel Adapter → Normalized Event → Conversation Engine → Inbox → CRM
 ```
 
-The adapter is the only place that knows a provider exists. It translates in both directions and
-nothing else does.
+If `grep -ri "line\|meta\|whatsapp"` finds matches in the conversation engine, the inbox UI or the
+automation layer, the boundary has leaked.
+
+Adding the second channel is the test. If it requires touching the engine, the abstraction is wrong,
+and it is cheaper to fix then than after four channels.
 
 ---
 
-## 2. The model
+## 3. The model
 
 ### Channel
 
-Not an object. A `SELECT` value on the objects that need it:
-`LINE | FACEBOOK | INSTAGRAM | WHATSAPP | EMAIL | WEBCHAT`.
-
-Deliberately not a table. Channels are a closed set that changes when we ship an adapter, which is a
-code change anyway. A table would imply tenants can add channels, which they cannot.
+Not an object. A `SELECT`: `LINE | FACEBOOK | INSTAGRAM | WHATSAPP | EMAIL | WEBCHAT`. A closed set
+that changes when an adapter ships, which is a code change anyway.
 
 ### ChannelAccount
 
-One connected provider account: a single LINE Official Account, one Facebook Page, one Instagram
-professional account, one WhatsApp Business phone number, one mailbox, one web-chat site.
+One connected provider account: one LINE OA, one Facebook Page, one mailbox.
 
-| Field | Purpose |
-| --- | --- |
-| `name` | Human label |
-| `channel` | Which provider |
-| `externalId` | Provider-side account id. LINE `destination`, Meta page id. **This is the tenant routing key.** |
-| `isActive` | Whether it sends and receives |
+`name`, `channel`, `externalId`, `isActive`, `billingEntity`.
 
-Credentials do **not** live here. They live in app `serverVariables` or a connection provider.
-Never in a record, never in code.
+`externalId` is the provider-side account id (LINE `destination`, Meta page id) and is **the tenant
+routing key**. `billingEntity` is how a Pattaya Notary enquiry lands on the right legal person.
+
+Credentials do not live here. They live in app `serverVariables` or a connection provider.
 
 ### ContactIdentity
 
 One customer handle on one channel. A person legitimately has several.
 
-| Field | Purpose |
-| --- | --- |
-| `displayName` | As reported by the provider |
-| `channel` | Which provider |
-| `externalId` | LINE user id, Meta PSID, phone number, email address |
-| `avatarUrl` | Provider profile picture |
-| `person` | Relation to the Twenty `Person`, nullable |
+`displayName`, `channel`, `externalId`, `avatarUrl`, `person` (nullable).
 
-`person` is nullable on purpose: a message can arrive before anyone knows who sent it. Resolution is
-a later step, sometimes a human one.
-
-```
-John Smith (Person)
-├── LINE      U4af4980629
-├── Instagram @johnsmith
-├── WhatsApp  +66812345678
-└── Email     john@example.com
-```
+**`person` is nullable on purpose.** A message can arrive before anyone knows who sent it.
+Resolution is a later step, sometimes a human one. See §5.
 
 ### Conversation
 
-A thread with one customer on one channel.
+`title`, `channel`, `status` (OPEN/PENDING/CLOSED), `externalId`, `lastMessageAt`,
+`lastMessagePreview`, `unreadCount`, `person`, `contactIdentity`, `channelAccount`, `assignee`.
 
-| Field | Purpose |
-| --- | --- |
-| `title` | Display name |
-| `channel` | Which provider |
-| `status` | `OPEN` / `PENDING` / `CLOSED` |
-| `externalId` | Provider thread id, for deduplicating redelivered webhooks |
-| `lastMessageAt`, `lastMessagePreview`, `unreadCount` | Denormalized, so the list renders in one query |
-| `person` | The CRM contact |
-| `contactIdentity` | The handle that opened it |
-| `channelAccount` | Which of our accounts received it |
-| `assignee` | The `WorkspaceMember` responsible |
-
-One conversation per customer per channel, not one per channel per topic. Cross-channel history is
-assembled by joining through `Person`, not by merging threads.
+One conversation per customer per channel. Cross-channel history is assembled by joining through the
+CRM person, not by merging threads.
 
 ### Message
 
-| Field | Purpose |
-| --- | --- |
-| `body` | Text content |
-| `direction` | `INBOUND` / `OUTBOUND` / `INTERNAL` |
-| `sentAt` | Provider timestamp, not receipt time |
-| `senderName` | Display name of the sender |
-| `externalId` | Provider message id, for deduplication |
-| `conversation` | Parent thread |
+`body`, `direction` (INBOUND/OUTBOUND/INTERNAL), `sentAt`, `senderName`, `externalId`, `conversation`.
 
-`INTERNAL` covers internal notes, which are messages that are never delivered. Modelling them as a
-direction rather than a separate object keeps the thread a single ordered list.
+`INTERNAL` covers internal notes: messages that are never delivered. Modelling them as a direction
+keeps the thread one ordered list.
 
-### Attachment — **not yet designed**
+### Assignment, Team, Tag
 
-Likely a `FILES` field on `Message` rather than a separate object, since Twenty's `FILES` type
-already handles storage and signed URLs. Confirm against provider media limits before committing.
+Deliberately not objects yet.
 
-### Assignment
+- Assignment is `Conversation.assignee`, a relation. Promote to an object only when assignment
+  history or multiple assignees is a real requirement.
+- Tags start as `MULTI_SELECT`. Promote when they need their own metadata.
+- Teams have no Twenty primitive; roles are the nearest thing. Row-level rules are Enterprise (O7).
 
-Deliberately **not** an object. It is `Conversation.assignee`, a relation to `WorkspaceMember`.
+### Attachment
 
-Avoid premature abstraction: a separate `Assignment` object only earns its place when we need
-assignment history or multiple simultaneous assignees. Neither is an MVP requirement. Revisit if
-SLA reporting arrives.
-
-### Team — **not designed yet**
-
-Twenty has no team primitive today; roles are the closest thing. Options are a custom object, or
-Twenty's roles plus row-level permission predicates (an Enterprise-licensed feature). Decide
-alongside the Enterprise question in [`ARCHITECTURE.md`](./ARCHITECTURE.md) §8.
-
-### Tag — **not designed yet**
-
-Probably `MULTI_SELECT` on `Conversation` for the MVP, upgraded to a relation if tags need their own
-metadata (colour, owner, automation rules). Start with the cheap version.
-
-### InternalNote
-
-Covered by `Message.direction = INTERNAL`. No separate object.
+Not designed. Likely a `FILES` field on Message rather than an object, since that type already
+handles storage and signed URLs. Confirm against provider media limits first.
 
 ---
 
-## 3. Adapter contract
+## 4. AI qualification
 
-Each adapter implements the same two directions. Provider knowledge stops here.
+The gate between "someone messaged us" and "this is a client".
 
-### Inbound
+The agent's job, in order:
 
-```
-receive(rawRequest) → NormalizedEvent[]
-```
+1. Greet and establish what they want
+2. **Ask whether they have used the firm before.** Highest-signal, lowest-tech re-identification
+3. Collect name and a contact method
+4. Judge whether this is a real enquiry
+5. On pass, create the CRM records and hand to staff with a summary
 
-An adapter must:
+What it must not do: promise anything, quote a price, or give legal advice. Qualification only.
 
-1. **Verify the signature.** LINE `X-Line-Signature`, Meta `X-Hub-Signature-256`. Reject unverified
-   payloads before parsing.
-2. **Resolve the tenant** from the provider account identifier, and nothing else.
-3. **Parse into normalized events.** One provider payload may carry several.
-4. **Be idempotent.** Providers redeliver. Deduplicate on `externalId`.
-5. **Never write CRM records.** The engine does that.
+Thai inbound is a good first use of AI beyond qualification: a translate action on a message, exposed
+as a tool. More useful to staff than translating menus.
 
-```ts
-type NormalizedInboundEvent = {
-  channel: Channel;
-  channelAccountExternalId: string;
-  contact: { externalId: string; displayName?: string; avatarUrl?: string };
-  conversationExternalId: string;
-  message: { externalId: string; body: string; sentAt: string; attachments?: NormalizedAttachment[] };
-};
-```
-
-### Outbound
-
-```
-send(NormalizedOutboundMessage) → { externalId, deliveredAt } | DeliveryFailure
-```
-
-The engine hands the adapter a conversation, a body and attachments. The adapter looks up
-credentials, translates to the provider's format, calls the API and reports back. It must surface
-rate limits and permanent failures distinctly, because retry policy differs.
+**Audit requirement:** anything the AI creates or changes must be attributable. Record which model,
+which prompt version, and what it based the decision on. "The AI made a contact and nobody knows why"
+is not acceptable in a law firm.
 
 ---
 
-## 4. Per-provider notes
+## 5. Contact re-identification
 
-Written down now so the model does not have to change later. **None of this is implemented.**
+Matching an incoming chatter to an existing client. The hardest correctness problem in the system.
 
-### LINE Official Account
+**VERIFIED: Twenty has no record merge and no duplicate detection.** So a wrong link is expensive to
+undo. And in a law firm a wrong link puts one client's matter in front of another client's record,
+which is a confidentiality problem, not a data quality problem.
 
-- One webhook URL for all tenants; route on the `destination` field. This is exactly what Twenty's
-  `serverRouteTriggerSettings` resolver is for.
-- Verify `X-Line-Signature` (HMAC-SHA256 of the raw body with the channel secret).
-- Reply tokens are short-lived and single-use. Anything later than the immediate reply needs the
-  push API, which is quota-metered. The engine must not assume replies are free.
-- Profile fetch is a separate call; do not expect a display name on the event.
+**Therefore: auto-link only on certainty. Everything else is a suggestion a human confirms.**
 
-### Meta (Messenger, Instagram, WhatsApp Business Cloud)
+### Tier 1 — known handle
 
-- Shared webhook infrastructure, per-product payload shapes. Three adapters or one adapter with
-  three parsers, decided when we build it.
-- `hub.challenge` verification handshake on subscribe.
-- Verify `X-Hub-Signature-256`.
-- Onboarding is OAuth, so this uses a connection provider rather than static credentials.
-- WhatsApp adds a 24-hour customer service window and template-message rules. That constraint has to
-  surface in the UI, not just fail at send time.
+`ContactIdentity(channel, externalId)` lookup. Instant, certain, free. Covers most returning
+customers. Nothing clever needed.
 
-### Email
+### Tier 2 — new handle, possibly known person
 
-- Twenty already syncs Gmail, Microsoft and IMAP into its own `Message`/`MessageThread` objects.
-  **Do not reuse those for omnichannel** — that schema is email-specific and upstream-owned. Read it
-  as a reference for participant matching.
-- Decide later whether inbox email is a separate adapter or a view over Twenty's existing sync.
+| Signal | Strength | Action |
+| --- | --- | --- |
+| Exact phone, normalized to E.164 | Strong | Auto-link |
+| Exact email, lowercased | Strong | Auto-link |
+| Passport or tax ID given in chat | Very strong | Auto-link |
+| "Yes I'm an existing client" plus one weak signal | Good | Suggest |
+| Fuzzy name match | Weak | Suggest only |
+| Name alone | Very weak | Never link |
 
-### Website live chat
+Every auto-link writes a timeline event saying how it matched, so a wrong one is traceable.
 
-- Our own widget plus a public logic-function route. No provider to verify against, so this one
-  carries its own auth and abuse-prevention burden.
-- The only channel where we control both ends, so a good place to prototype typing indicators and
-  read receipts.
+### Three things that make this work
 
----
+**Just ask.** The qualification agent asks whether they have used the firm before. Highest signal
+available, near-zero cost, and people answer honestly.
 
-## 5. Contact resolution
+**Normalize phone numbers on write.** Thai numbers arrive as `0812345678`, `+66812345678`,
+`66812345678`, `081-234-5678`. All the same person. Normalizing to E.164 turns the strongest signal
+from unreliable into reliable.
 
-Matching an incoming handle to a CRM contact:
+**Thai names defeat naive matching.** Romanization varies (Somchai/Somchay, Suwanee/Suvanee), everyone
+uses a nickname rather than their legal name, and the same person appears in Thai script in one place
+and Latin in another. Combined with the verified finding that Twenty indexes with
+`to_tsvector('simple', ...)` and cannot tokenize Thai at all, **name matching must happen in Takdai
+against its own index**, not by calling the CRM's search endpoint.
 
-1. Look up `ContactIdentity` by `(channel, externalId)`. Hit → done.
-2. Create the `ContactIdentity` with `person = null`.
-3. Attempt a match on a strong signal: exact phone, exact email. Never on display name.
-4. No match → leave unresolved. Show it in the UI as an action, do not guess.
+### Suggestions are records
 
-Never auto-create a `Person` from a display name. "Somchai" is not an identity, and a CRM full of
-duplicate ghosts is worse than an unlinked conversation.
+`MatchSuggestion`: conversation, candidate person, score, reasons, status (pending / accepted /
+dismissed).
 
----
-
-## 6. Realtime
-
-Twenty's own record views update live over SSE. The front-component sandbox provides no realtime
-transport, so a fully custom pane must poll.
-
-Measured in the prototype: **25ms per fetch at 3 conversations, 5s poll interval.** Re-measure at
-500 before deciding. This is one of the arguments for keeping the conversation list a native view
-and reserving the front component for the message thread.
-
-Typing indicators and presence are not achievable in a polled front component at acceptable cost.
-Treat them as out of scope until the transport question is resolved.
+Not ephemeral UI. Dismissals must stick, or the same wrong suggestion reappears on every message and
+staff learn to ignore the prompt. And when an auto-link turns out wrong, the reasoning needs to be
+there.
 
 ---
 
-## 7. Build order
+## 6. Per-provider notes
 
-1. Objects and inbox shell — **done**, `apps/takdai-inbox`
-2. Contact resolution and unresolved-identity UI
-3. LINE adapter, inbound only
-4. LINE adapter, outbound
-5. Meta adapters
-6. Attachments
-7. Assignment, tags, internal notes
-8. Web chat widget
-9. Email
+Written down so the model does not have to change later. **None implemented.**
 
-Each channel after the first is a test of the boundary. If adding Meta requires touching the
-conversation engine, the abstraction is wrong and it is cheaper to fix it then than after four
-channels.
+**LINE OA.** One webhook URL for all accounts, routed on `destination`. Verify `X-Line-Signature`
+(HMAC-SHA256 of the raw body). Reply tokens are short-lived and single-use; anything later needs the
+quota-metered push API, so the engine must not assume replies are free. Profile fetch is a separate
+call, so do not expect a display name on the event.
+
+**Meta (Messenger, Instagram, WhatsApp Cloud API).** Shared webhook infrastructure, per-product
+payloads. `hub.challenge` handshake on subscribe, `X-Hub-Signature-256` verification. OAuth
+onboarding, so a connection provider rather than static credentials. WhatsApp adds a 24-hour customer
+service window and template rules, which must surface in the UI rather than failing at send time.
+
+**Use the official WhatsApp Business Cloud API.** Unofficial reverse-engineered clients violate
+Meta's terms and get numbers banned.
+
+**Email.** Twenty already syncs Gmail, Microsoft and IMAP into its own `Message`/`MessageThread`
+objects. **Do not reuse those**: that schema is email-specific and upstream-owned. Read it as a
+reference for participant matching.
+
+**Webchat.** Our own widget plus a public route. The only channel where we control both ends, so a
+good place to prototype typing indicators. Also the one carrying its own abuse-prevention burden.
+
+---
+
+## 7. Multi-tenant webhook routing
+
+VERIFIED and worth reading before designing anything: Twenty's `serverRouteTriggerSettings` provides
+a public route at `/webhooks/server/:id` that runs a **resolver** function in the publisher
+workspace, which returns `{ targetLogicFunctionUniversalIdentifier, workspaceId, payload }`. The
+platform then enqueues the target in that workspace with retry and backoff.
+
+`packages/twenty-server/src/engine/core-modules/server-route-trigger/server-route-trigger.service.ts`
+
+One webhook URL, many tenants. Exactly the shape a channel adapter needs. Relevant to Takdai as a
+multi-tenant product; less so to TLL alone.
+
+---
+
+## 8. Realtime
+
+The front-component sandbox provides no realtime transport, so a custom pane must poll. MEASURED in
+the prototype: 25ms per fetch at 3 conversations, 5s poll interval. Not measured at 500.
+
+Twenty's native record views update over SSE for free, which is a standing argument for keeping a
+conversation list native and reserving custom UI for the message thread.
+
+Typing indicators and presence are out of scope until the transport question is resolved. Not an
+issue for a Takdai built outside Twenty, where the DOM is unrestricted.

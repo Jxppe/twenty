@@ -1,252 +1,229 @@
 # Architecture
 
-Domain boundaries, ownership and integration patterns for the platform. Read
-[`TWENTY_ARCHITECTURE.md`](./TWENTY_ARCHITECTURE.md) for what the Twenty foundation actually
-provides, and [`REFERENCES.md`](./REFERENCES.md) before building anything substantial.
+Domain boundaries, ownership and integration patterns.
 
-Status: **PROPOSED**, except where it restates a verified Twenty capability. Nothing here is built
-apart from the omnichannel prototype in `apps/takdai-inbox`.
+Read [`DECISIONS.md`](./DECISIONS.md) for why things are the way they are,
+[`TWENTY_ARCHITECTURE.md`](./TWENTY_ARCHITECTURE.md) for what the foundation actually provides, and
+[`REFERENCES.md`](./REFERENCES.md) before building anything substantial.
 
----
-
-## 1. Two products, one platform
-
-| Product | What it is | Who runs it |
-| --- | --- | --- |
-| **Takdai** | The commercial SaaS: CRM + omnichannel + sales + Thai payments | Any small business |
-| **TLL CRM** | Thailiving Law, Unique X, Pattaya Notary internal tooling | One organization |
-
-Thailiving's workspace installs the Takdai apps **and** the TLL app. A Takdai customer installs only
-the Takdai apps and never sees anything legal. This is enforced by the app boundary, not by
-convention: an app that is not installed contributes no objects, no screens and no navigation.
-
-The corollary is a hard rule: **nothing in a Takdai app may reference a legal concept, a Thailiving
-entity, or a specific bank account.** If a feature only makes sense for a law firm, it belongs in
-`tll-crm`.
+Status: **PROPOSED**, except where it restates a verified Twenty capability. Built so far: the
+omnichannel prototype in `apps/takdai-inbox`, which predates D4 and will be renamed.
 
 ---
 
-## 2. Domain ownership
+## 1. What this is
 
-Each concept has exactly one owner. The owner holds the record; everyone else holds a reference.
+**This repository is TLL CRM**: the internal system for Thailiving Law, Unique X Services and
+Pattaya Notary. One firm, three legal entities, shared clients.
 
-### CRM (Twenty, unmodified)
+It is a **practice management system**, not a sales CRM. Twenty is the chassis: contacts, records,
+views, permissions, workflows, APIs. The product is what we build on top.
 
-Owns people, companies, leads, opportunities/deals, pipelines, tasks, notes, activities, and the
-relationships between them. Also owns workspaces, users, roles, permissions and views.
+**Takdai is a separate product, built elsewhere** (D4). It is a commercial SaaS with its own stack
+and repository. Nothing here needs to stay industry-neutral. Law-firm concepts are first-class.
 
-We do not fork these. We extend them with app-defined fields where a relation is genuinely needed
-(`person.conversations`, `person.contactIdentities`).
-
-### Omnichannel (our app)
-
-Owns channel accounts, contact channel identities, conversations, messages, attachments, inbox
-state, assignment, delivery and read state.
-
-It does **not** own the customer. A `Conversation` points at a `Person`; the `Person` is Twenty's.
-
-### Sales (our app)
-
-Owns products/services, quotations, quotation line items, invoices, invoice line items, and payment
-requests.
-
-It does **not** own the deal. A `Quotation` points at an `Opportunity`; the `Opportunity` is
-Twenty's.
-
-### Payments (our app)
-
-Owns PromptPay/Thai QR generation, bank transfer instructions, payment records, payment status and
-verification state. Per-organization bank accounts and payment settings live in app configuration,
-never in code.
-
-### External accounting (not ours)
-
-Owns statutory accounting, bookkeeping, the ledger, tax accounting and official reports. We push
-customers, invoices and payments to it through a provider interface and read status back. We never
-mirror the ledger.
-
-**We are not building an ERP.** If a feature requires double-entry bookkeeping to be correct, it
-belongs in the accounting provider.
+If Takdai later needs an omnichannel inbox, it builds its own and talks to whatever CRM sits behind
+it. The domain thinking in [`OMNICHANNEL.md`](./OMNICHANNEL.md) transfers; the code does not have to.
 
 ---
 
-## 3. Where code lives
+## 2. The three companies
+
+One workspace. `BillingEntity` as a record, not as a tenant boundary (D2).
+
+| Entity | What it is |
+| --- | --- |
+| Thailiving Law | The firm. Legal work. |
+| Unique X Services | Service work: company setup, registrations. Separate for tax. |
+| Pattaya Notary | Client-facing notarization brand. Has its own website and social channels. |
+
+`billingEntity` is a **required** relation on `Matter`, `Quotation` and `Invoice`, and present on
+`ChannelAccount`. It names the legal party to a contract, so it is not optional and not a tag.
+
+It is **not** on `Person` or `Company`. Clients are shared across all three, which is the entire
+reason for one workspace.
+
+It flows by default and can always be overridden:
 
 ```
-twenty/                       upstream, tracked, not modified
-  packages/twenty-server      AGPL. Do not edit for product features.
-  packages/twenty-front       AGPL. Do not edit for product features.
-  packages/twenty-sdk         MIT. The app development toolkit.
+ChannelAccount (Pattaya Notary LINE)
+        └─► Matter defaults to Pattaya Notary
+                └─► Quotation inherits from Matter
+                        └─► Invoice inherits from Quotation
+```
+
+`PracticeArea.defaultBillingEntity` does the same job for matters that do not arrive through a
+channel: notarization defaults to Pattaya Notary, company registration to Unique X Services.
+
+---
+
+## 3. Domain ownership
+
+One owner per concept. The owner holds the record; everyone else holds a reference.
+
+### CRM — Twenty, unmodified
+
+People, companies, tasks, notes, timeline activity, users, roles, permissions, views, workflows.
+
+We relabel the vocabulary (D6) and extend with app-defined fields. We do not fork it.
+
+### Practice — our app
+
+Matters, deadlines, required documents, practice areas, bookings, work logs.
+
+The core of the system. See [`MATTERS.md`](./MATTERS.md).
+
+### Sales — our app
+
+Products and services, quotations, invoices, payment requests.
+
+Does not own the matter: `Quotation.matter` points at it.
+
+### Payments — our app
+
+PromptPay QR, bank transfer instructions, payments, verification state. Per-entity bank accounts in
+configuration, never in code. See [`PAYMENTS.md`](./PAYMENTS.md).
+
+### Accounting — FlowAccount, not ours
+
+Statutory accounting, the ledger, tax, official reports. We push customers, invoices and payments
+over its API and read status back. We never mirror the ledger.
+
+CONFIRMED: the FlowAccount API is available on any package, so no plan upgrade is needed to
+integrate.
+
+**We are not building an ERP** (D3).
+
+### Omnichannel — Takdai, external
+
+If and when it exists. Takdai owns conversations, messages and channel identities; the CRM owns the
+client. See [`OMNICHANNEL.md`](./OMNICHANNEL.md) for the contract.
+
+### HR and attendance — TLLACC, for now
+
+Unresolved: whether work logs live here or there (O1), and whether TLLACC currently issues invoices
+(O2). Two systems issuing invoices is the failure mode worth avoiding.
+
+---
+
+## 4. Where code lives
+
+```
+twenty/                     upstream, tracked, unmodified
+  packages/twenty-server    AGPL. Not edited.
+  packages/twenty-front     AGPL. Not edited.
+  packages/twenty-sdk       MIT. The app toolkit.
 
 apps/
-  takdai-inbox                omnichannel: objects, inbox UI, channel adapters
-  takdai-sales                products, quotations, invoices, payments (not yet created)
-                              adds a Sales section to the sidebar with its own views
-  tll-crm                     Thailiving-only modules (not yet created)
+  tll-crm                   matters, bookings, work logs, sales, payments
+                            (currently apps/takdai-inbox, to be renamed)
 ```
 
-Apps are standalone projects with their own `package.json` and lockfile. They are not Yarn workspace
-members of the Twenty monorepo, and they can be extracted to separate repositories without changing
-a line of code.
+One app unless there is a reason for two. The three-app split was there to keep a commercial product
+clean of law-firm concepts, and D4 removed that need. Objects cannot move between apps after the
+first publish, so fewer boundaries is the safer default now.
 
-**Why the boundary is not negotiable:** Twenty is AGPL-3.0 with an Application Exception. Code that
-talks to Twenty only through the published interfaces may stay proprietary; modifying Twenty's own
-source puts our version under AGPLv3 in full, including §13, which obliges us to give every network
-user the source. See §2 of [`TWENTY_ARCHITECTURE.md`](./TWENTY_ARCHITECTURE.md).
+Apps are standalone projects with their own lockfile, not Yarn workspace members. They can be lifted
+into a separate repository unchanged.
+
+**Why the boundary still holds** (D1): the licensing consequence is now small, since our network
+users are our own staff. The **upgrade** argument is what keeps the rule. Twenty moves fast and every
+core edit is a merge conflict forever.
 
 ---
 
-## 4. Runtime shape
+## 5. Runtime shape
 
-Deliberately boring. No microservices at this stage.
+Deliberately boring. No microservices.
 
 ```
-                    ┌─────────────────────────────────────┐
-   LINE / Meta ────► │ public webhook route (one URL)      │
-                    │ /webhooks/server/:resolverId        │
-                    └──────────────┬──────────────────────┘
-                                   │ resolver decides tenant
-                                   ▼
-                    ┌─────────────────────────────────────┐
-                    │ message queue (Twenty's own)        │
-                    └──────────────┬──────────────────────┘
-                                   ▼
-                    ┌─────────────────────────────────────┐
-                    │ logic function, in tenant workspace │
-                    │ normalize → upsert → match contact  │
-                    └──────────────┬──────────────────────┘
-                                   ▼
-                    ┌─────────────────────────────────────┐
-                    │ Postgres, schema per workspace      │
-                    └──────────────┬──────────────────────┘
-                        ┌──────────┴───────────┐
-                        ▼                      ▼
-              Inbox front component      Twenty record views
-              (polls REST)               (live over SSE)
+  ┌──────────────────────────────────────────────┐
+  │  Twenty                                       │
+  │    NestJS + PostgreSQL + Redis + worker        │
+  │    schema per workspace                        │
+  │    our app: objects, screens, logic functions  │
+  └───────┬──────────────────────────┬────────────┘
+          │                          │
+          │ REST/GraphQL             │ public routes
+          ▼                          ▼
+   FlowAccount API           client-facing pages
+   (invoices, payments)      (quotation accept, payment, booking)
 ```
 
-Everything in that diagram is a Twenty platform capability we use, not infrastructure we run.
-
-### Why no separate omnichannel service yet
-
-Keeping conversations as app objects in the tenant's schema buys record views, filters, search,
-permissions, timeline, workflow triggers, the REST/GraphQL API and live-updating lists for free. A
-separate service means reimplementing all of that plus a sync layer, and creates a second source of
-truth for the same data.
-
-Extract one only when a concrete pressure appears: sustained high-volume ingest that the function
-runtime cannot absorb, or a channel needing long-lived socket connections. Write down the pressure
-before extracting.
+Everything is a Twenty platform capability we use, not infrastructure we run. Cloudflare sits in
+front for DNS, CDN, WAF and TLS; the application itself is containers on a VM.
 
 ---
 
-## 5. Integration patterns
+## 6. Integration patterns
 
-### Inbound provider events
+**Client-facing pages.** Public logic-function routes returning HTML (`isAuthRequired: false`),
+reached by an unguessable token. Quotation acceptance, payment, booking. VERIFIED precedent:
+`packages/twenty-apps/examples/document-generator/src/logic-functions/view-document.ts`. No separate
+web application needed.
 
-`Provider → public webhook → resolver → queue → per-tenant handler → normalized records`
+**Outbound API calls.** Always from a logic function, never the browser. Front components are
+sandboxed at an opaque origin, so cross-origin `fetch` sends `Origin: null`. Secrets belong
+server-side anyway.
 
-The resolver runs in the publisher workspace and maps a provider-side account identifier (LINE
-`destination`, Meta page id) to a tenant workspace. One webhook URL serves every tenant. Verified:
-`packages/twenty-server/src/engine/core-modules/server-route-trigger/server-route-trigger.service.ts`.
+**Automation.** Twenty workflows over our objects. `DATABASE_EVENT` on `quotation.updated`,
+`CRON` for deadline escalation. Logic functions can also be exposed as workflow actions and AI tools.
 
-### Outbound provider calls
+**Accounting.** A provider interface with FlowAccount as the only implementation for now. `None`
+stays valid so the system works if the connection breaks.
 
-Always from a logic function, never from the browser. Front components are sandboxed at an opaque
-origin, so cross-origin `fetch` sends `Origin: null` and most provider APIs will refuse it. Secrets
-belong server-side regardless.
-
-### Customer-facing pages
-
-Public logic-function routes returning HTML (`isAuthRequired: false`). Quotation acceptance and
-payment pages need no separate web application for the MVP.
-
-### Automation
-
-Twenty workflows over our objects. `DATABASE_EVENT` triggers on `conversation.created`,
-`quotation.updated` and so on. Our logic functions can also be exposed as workflow actions and as AI
-agent tools.
-
-### Accounting
-
-A provider interface with one implementation at a time:
-
-```
-createCustomer  createInvoice  updateInvoice
-recordPayment   syncInvoice    getInvoiceStatus
-```
-
-`None` is a valid provider. A customer with no accounting connection must still be able to quote,
-invoice and take payment.
+**Critical constraint, learned the hard way:** the server builds the logic-function dependency layer
+by running `yarn install` against the app's `package.json` **inside its own container**, where only
+`package.json` and `yarn.lock` exist. Nothing in that file may reference a local path the server does
+not copy. A `postinstall` pointing at `scripts/` made every logic function fail with
+`ROUTE_TRIGGER_PLATFORM_ERROR`.
 
 ---
 
-## 6. Multi-tenancy
+## 7. Activity history and accountability
 
-Verified: Twenty gives every workspace its **own Postgres schema** (`workspace_<base36 uuid>`), plus
-a `subdomain` and optional `customDomain`. Tenant isolation is at the schema level, not a `tenantId`
-column.
+Cross-cutting: **for any client, see what happened, when, and who did it.**
 
-Consequences worth internalizing:
+Not a module we build. VERIFIED mechanisms:
 
-- Our app objects are created per workspace. There is no cross-tenant query, by construction.
-- A migration is a metadata sync, applied per workspace, not a global DDL script.
-- Anything genuinely cross-tenant (the webhook resolver, marketplace metadata) lives in core tables,
-  which we do not own. Design around needing very little of it.
-
----
-
-## 7. Activity history and accountability (cross-cutting)
-
-A standing requirement across every domain: **for any client, see what happened, when, and who did
-it.** Conversations, quotations, invoices, payments and CRM changes all land in one chronological
-view per client.
-
-This is not a module we build. Twenty provides it, and every domain feeds it.
-
-**VERIFIED:**
-
-- Standard objects carry `createdBy` / `updatedBy` as `ACTOR` fields, populated automatically.
-- `TimelineActivity` is a standard object; Person, Company and Opportunity record pages already have
-  a Timeline tab.
-- `defineTimelineActivityType` lets an app declare its own events, emitting on `created`, `updated`,
-  `deleted`, `restored`, `linked`, `unlinked`.
-- `emit.through` **fans an event out along a relation**, so an event on a quotation appears on the
-  related Person's timeline with no fan-out code of ours.
+- `createdBy` / `updatedBy` are `ACTOR` fields on standard objects, populated automatically
+- `TimelineActivity` is a standard object; Person, Company and Opportunity already have a Timeline tab
+- `defineTimelineActivityType` declares our own events on `created`, `updated`, `deleted`, `restored`,
+  `linked`, `unlinked`
+- **`emit.through` fans an event along a relation**, so an event on a quotation lands on the client's
+  timeline with no fan-out code of ours
 
 **Rule for every domain:** when you add a state change worth answering a question about later,
-declare a timeline activity type for it. They are cheap, and they cannot be backfilled.
+declare a timeline activity type. They are cheap and cannot be backfilled.
 
-Assignment fields (`Conversation.assignee`, `Opportunity.owner`) answer "who owns this now". The
-timeline answers "who did what, when". Both are needed; neither substitutes for the other.
+Assignment fields answer "who owns this now". The timeline answers "who did what, when". Both are
+needed.
 
-Note that Twenty's dedicated audit-log module (`core-modules/event-logs`) is Enterprise-licensed.
-Timeline activities are not, and are sufficient for operational history. Only a compliance-grade
-audit trail needs the Enterprise module.
-
----
-
-## 8. What we deliberately do not build
-
-- Statutory accounting, ledger, tax filing
-- Generic website analytics
-- An identity provider
-- A CMS (until there is a concrete requirement)
-- Our own CRM primitives (contacts, companies, deals, tasks, notes, views, permissions)
-- HR or attendance (TLLACC keeps that)
+Twenty's dedicated audit module (`core-modules/event-logs`) is Enterprise-licensed. Timeline
+activities are not, and are sufficient for operational history.
 
 ---
 
-## 9. Open architectural questions
+## 8. Multi-tenancy
 
-Tracked here so they are decided deliberately rather than by accident.
+VERIFIED: schema per workspace (`workspace_<base36 uuid>`), plus `subdomain` and `customDomain`.
 
-1. **Twenty Enterprise subscription, yes or no.** Gates billing, SSO, row-level permissions and
-   audit logs. Determines whether inbox team-scoping is a security boundary or a view filter.
-2. **Thai locale.** Not present upstream. Upstream contribution, local patch, or English chrome.
-3. **How much of the Inbox is a front component** versus native Twenty views. See the spike results
-   in [`TWENTY_ARCHITECTURE.md`](./TWENTY_ARCHITECTURE.md) §6.2.
-4. **Where quotation editing lives.** Line items are child records; the native record UI is a poor
-   line-item editor, and the sandbox makes a custom one expensive.
-5. **One sales app or separate sales and payments apps.** Objects cannot move between apps after
-   the first publish.
+Under D4 this is mostly irrelevant: one firm, one workspace. Worth knowing only because it means
+migrations are metadata syncs applied per workspace, not global DDL.
+
+---
+
+## 9. What we deliberately do not build
+
+Statutory accounting, ledger, tax filing. Website analytics. An identity provider. A CMS. Our own
+CRM primitives. Payroll.
+
+---
+
+## 10. Open questions
+
+Tracked in [`DECISIONS.md`](./DECISIONS.md) under "Open". Summarised:
+
+O1 work logs versus TLLACC · O2 who issues invoices · O3 relabel or split Matter · O4 Thai contact
+name search · O5 slip verification provider · O6 build or adopt booking availability · O7 Enterprise
+for matter confidentiality
