@@ -32,6 +32,46 @@ included. Login redirects are built from it.
 
 Data lives in the two named volumes, so it survives restarts, reboots and image upgrades.
 
+### With Tailscale, use the tailnet name
+
+Better than the LAN IP, and worth doing from the start, because changing `SERVER_URL` later means
+recreating the container.
+
+**Quick version.** Point `SERVER_URL` at the MagicDNS name instead of the LAN address:
+
+```
+SERVER_URL=http://nas.your-tailnet.ts.net:2020
+```
+
+Works from the office, from home and from a phone, with no port forwarding and nothing exposed to
+the internet.
+
+**Better version: real HTTPS, no port in the URL.** On the NAS, with Tailscale running on the host:
+
+```bash
+sudo tailscale serve --bg 2020
+sudo tailscale serve status
+```
+
+That puts a Let's Encrypt certificate in front of the container, so the CRM answers at
+`https://nas.your-tailnet.ts.net`. Set `SERVER_URL` to exactly that, with no port. Needs MagicDNS
+and HTTPS certificates enabled in the tailnet admin console under DNS. `sudo tailscale serve --bg
+off` undoes it.
+
+If Tailscale runs in a container on the NAS rather than on the host, `serve` proxies to that
+container's own localhost, not the NAS, so it needs host networking to work. Check before assuming.
+
+**Three things to know:**
+
+- **`SERVER_URL` holds one address.** Pick the tailnet name and use it everywhere, on the LAN too.
+  Setting it to the LAN IP and then connecting over Tailscale gives you redirects to an address the
+  remote client cannot reach.
+- **Every device that uses the CRM needs Tailscale.** No Tailscale, no name resolution, no access.
+  Fine for staff laptops and phones; it means clients can never reach it, which for the CRM itself
+  is correct.
+- **Do not use Funnel.** Funnel publishes to the open internet. Serve stays inside the tailnet.
+  Client-facing pages, when they exist, are a separate decision and want their own hostname.
+
 ### When to move off it
 
 This is the development image. It is fine for evaluating, for demo data, and for the first few
@@ -171,6 +211,6 @@ the port on the LAN.
 **Port 3000 refused.** Something else on the NAS has it. Change the published port on the left of
 `3000:3000` and the port in `SERVER_URL` together, then redeploy.
 
-**Do not expose this to the internet** by forwarding a port. It would be plain HTTP with client
-data behind it. When it needs to be reachable from outside, put it behind the reverse proxy with
-a certificate, or a Cloudflare Tunnel, and set `SERVER_URL` to that hostname.
+**Do not expose this to the internet** by forwarding a port. Remote access is what Tailscale is
+for: `tailscale serve` gives it a certificate and keeps it inside the tailnet. Port forwarding
+would put plain HTTP with client data behind it on the open internet.
