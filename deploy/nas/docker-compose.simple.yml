@@ -1,0 +1,25 @@
+# The quick way. One container: Postgres, Redis, server and worker inside it.
+# Same image the CLI runs on a development PC, just pointed at the NAS.
+#
+# EDIT ONE LINE: SERVER_URL.
+
+name: tll-crm
+
+services:
+  twenty:
+    image: twentycrm/twenty-app-dev:latest
+    container_name: twenty-app-dev
+    ports:
+      - "2020:2020"
+    environment:
+      NODE_PORT: 2020
+      # CHANGE ME: the NAS address, port included. Not localhost.
+      SERVER_URL: http://192.168.1.50:2020
+    volumes:
+      - twenty-app-dev-data:/data/postgres
+      - twenty-app-dev-storage:/app/packages/twenty-server/.local-storage
+    restart: unless-stopped
+
+volumes:
+  twenty-app-dev-data:
+  twenty-app-dev-storage:

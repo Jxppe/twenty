@@ -1,17 +1,58 @@
 # Running TLL CRM on the NAS
 
-Moves Twenty off the development PC and onto the NAS, so the instance stays up when the
-laptop is closed. Four containers: server, worker, Postgres, Redis.
+Moves Twenty off the development PC and onto the NAS, so the instance stays up when the laptop
+is closed.
 
-This replaces `yarn twenty docker start`, which ran the all-in-one `twenty-app-dev` image on
-`localhost:2020`. That image bundles Postgres inside the container and is meant for development.
-This one keeps the database in its own volume, which is what you want the moment real records
-go in.
+Two ways to do it, and the quick one is genuinely quick.
+
+## Start here: the one-container way
+
+The same image the CLI runs on a development PC, pointed at the NAS instead. Postgres, Redis,
+server and worker all inside one container. One value to change.
+
+Over SSH:
+
+```bash
+sudo docker run -d --name twenty-app-dev --restart unless-stopped \
+  -p 2020:2020 \
+  -e NODE_PORT=2020 \
+  -e SERVER_URL=http://192.168.1.50:2020 \
+  -v twenty-app-dev-data:/data/postgres \
+  -v twenty-app-dev-storage:/app/packages/twenty-server/.local-storage \
+  twentycrm/twenty-app-dev:latest
+```
+
+Through the UGOS Docker app: deploy `docker-compose.simple.yml` as a Project, after changing
+`SERVER_URL` to the NAS address.
+
+Either way, give it a few minutes and open `http://<nas-ip>:2020`.
+
+**The only thing that must be right is `SERVER_URL`.** Not `localhost`: the NAS address, port
+included. Login redirects are built from it.
+
+Data lives in the two named volumes, so it survives restarts, reboots and image upgrades.
+
+### When to move off it
+
+This is the development image. It is fine for evaluating, for demo data, and for the first few
+weeks of real use. It becomes the wrong thing when the instance holds records the firm depends
+on, because Postgres runs inside the app container: no separate database to back up cleanly, no
+independent upgrade, and one container failure takes everything.
+
+Migrating later is a `pg_dump` from this and a restore into the full stack below. Not free, not
+painful. Do it when the CRM stops being an experiment.
+
+---
+
+## The full stack
+
+Four containers, database in its own service. Everything below is about this.
 
 ## Which file to use
 
 | Your route | File |
 | --- | --- |
+| Just get it running | `docker-compose.simple.yml`, or the `docker run` above |
 | UGOS Pro Docker app, the Project editor | `docker-compose.ugos.yml` |
 | SSH, or any other NAS with a shell | `docker-compose.yml` plus `.env` |
 
