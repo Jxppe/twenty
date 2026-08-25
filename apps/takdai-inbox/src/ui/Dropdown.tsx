@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { IconChevronDown } from 'twenty-ui/icon';
 import { useTheme } from 'twenty-ui/theme-constants';
 
@@ -25,30 +25,49 @@ export const Dropdown = <TValue extends string>({
 }: DropdownProps<TValue>) => {
   const theme = useTheme();
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // document-level listeners never fire in the sandbox, so closing on an
-  // outside click is done with a blur-capturing wrapper instead.
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const timer = setTimeout(() => undefined, 0);
-
-    return () => clearTimeout(timer);
-  }, [isOpen]);
+  const [hoveredValue, setHoveredValue] = useState<TValue | null>(null);
+  const isSelectingRef = useRef(false);
 
   const selected = options.find((option) => option.value === value);
 
+  const select = (nextValue: TValue) => {
+    isSelectingRef.current = true;
+    onChange(nextValue);
+    setIsOpen(false);
+    setHoveredValue(null);
+  };
+
+  const optionBackground = (optionValue: TValue) => {
+    if (optionValue === hoveredValue) {
+      return theme.background.transparent.medium;
+    }
+
+    if (optionValue === value) {
+      return theme.background.transparent.light;
+    }
+
+    return 'transparent';
+  };
+
   return (
     <div
-      ref={containerRef}
       style={{ position: 'relative', display: 'inline-block' }}
+      // document-level listeners never fire in the sandbox, so outside clicks
+      // are detected by the wrapper losing focus.
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          setIsOpen(false);
+        if (isSelectingRef.current) {
+          isSelectingRef.current = false;
+          return;
         }
+
+        const nextFocused = event.relatedTarget as Node | null;
+
+        if (nextFocused !== null && event.currentTarget.contains(nextFocused)) {
+          return;
+        }
+
+        setIsOpen(false);
+        setHoveredValue(null);
       }}
     >
       <button
@@ -94,15 +113,27 @@ export const Dropdown = <TValue extends string>({
               data-testid={
                 testId !== undefined ? `${testId}-${option.value}` : undefined
               }
-              onClick={() => {
-                onChange(option.value);
-                setIsOpen(false);
+              // The wrapper's blur unmounts this menu on mousedown, before a
+              // click can land on it, so selection has to happen on mousedown.
+              onMouseDown={(event) => {
+                event.preventDefault();
+                select(option.value);
               }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  select(option.value);
+                }
+              }}
+              // Inline styles carry no :hover, so hover feedback is state.
+              onMouseEnter={() => setHoveredValue(option.value)}
+              onMouseLeave={() =>
+                setHoveredValue((previous) =>
+                  previous === option.value ? null : previous,
+                )
+              }
               style={{
-                background:
-                  option.value === value
-                    ? theme.background.transparent.light
-                    : 'transparent',
+                background: optionBackground(option.value),
                 border: 'none',
                 borderRadius: theme.border.radius.sm,
                 color: theme.font.color.primary,
