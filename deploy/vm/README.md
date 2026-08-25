@@ -26,8 +26,23 @@ own after a reboot. Windows fights you on that in three specific places.
 4. **Make Windows sign in by itself.** Run `netplwiz`, untick "Users must enter a user name and
    password", enter the password once.
 
-   If that tickbox is missing, Windows Hello is hiding it: Settings, Accounts, Sign-in options,
-   turn off "Require Windows Hello sign-in for Microsoft accounts", then reopen `netplwiz`.
+   **The tickbox is usually missing.** Windows 10 hides it behind a registry flag. In an elevated
+   prompt:
+
+   ```
+   reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device" /v DevicePasswordLessBuildVersion /t REG_DWORD /d 0 /f
+   ```
+
+   Reopen `netplwiz` and it is there. On a Microsoft account rather than a local one, the same
+   thing is also reachable through Settings, Accounts, Sign-in options, by turning off "Require
+   Windows Hello sign-in for Microsoft accounts".
+
+   Failing both, use [Sysinternals Autologon](https://learn.microsoft.com/sysinternals/downloads/autologon):
+   username, computer name as the domain, password, Enable. It keeps the password in LSA secrets
+   rather than plaintext in the registry, which the `AutoAdminLogon` registry recipe found in most
+   search results does not.
+
+   **Reboot once and watch it reach the desktop unattended before trusting it.**
 
    **This is the one people skip**, and it is why the CRM is down on Monday morning. Docker Desktop
    is a desktop application: it runs only while a user is signed in. `--restart unless-stopped`
