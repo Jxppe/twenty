@@ -1,0 +1,554 @@
+# Twenty Architecture Audit
+
+Assessment of the Twenty codebase against `/docs/PRODUCT.md`. No code was changed to produce this
+document.
+
+Audited revision: `1d83c2e5` (upstream `main`), Twenty version 2.35.x, Nx/Yarn 4 monorepo.
+
+---
+
+## 1. Verdict
+
+**Twenty is a good chassis, and the extension mechanism is stronger than the brief assumed.**
+
+Twenty has an application platform ("Twenty Apps") that can declare custom objects and fields,
+fields *on Twenty's own standard objects*, sidebar navigation entries, full-page custom screens,
+tabs on standard record pages, server-side functions with HTTP/cron/database-event triggers,
+public unauthenticated HTTP routes, roles and permissions, AI agents and tools, and views — all as
+version-controlled TypeScript, installed with a CLI, with zero edits to Twenty's source.
+
+Everything the MVP in `/docs/PRODUCT.md` §26 needs (Inbox, quotations, invoices, Thai payment
+requests) can be built inside that boundary. Three things cannot, and are the real decisions to
+make: **Thai language support**, **the front-component UI sandbox's limits**, and **authentication**.
+
+There is also a licensing dimension the brief does not mention, and it is the single most
+consequential finding.
+
+---
+
+## 2. Licensing (read first — it changes the architecture)
+
+`/LICENSE` is not plain AGPLv3. It has three tiers:
+
+| Tier | What it covers | What it means for us |
+| --- | --- | --- |
+| **MIT** | `twenty-sdk`, `twenty-client-sdk`, `twenty-shared`, `twenty-ui`, `create-twenty-app`, everything under `packages/twenty-apps` | Free to use and modify, proprietary derivatives fine |
+| **AGPLv3 + Twenty Application Exception** | `twenty-server`, `twenty-front`, most of the repo | See below |
+| **Commercial ("Enterprise")** | 314 files marked `/* @license Enterprise */` | Production use requires a Twenty Enterprise subscription |
+
+### The Application Exception
+
+`/LICENSE` lines 20–53 grant an additional permission under AGPLv3 §7. Paraphrasing the operative
+text:
+
+> "Application Interfaces" means the published HTTP APIs (REST and GraphQL) and webhooks; the
+> application manifest and configuration formats; logic functions executed by the platform's
+> function runtime; front components rendered by the platform's component renderer; and the
+> published Twenty SDKs.
+>
+> An "Application" is a work that interacts with Twenty through the Application Interfaces **and
+> that does not otherwise incorporate or modify the source code of Twenty**.
+>
+> Developing an Application, conveying it, or making it available for interaction over a network
+> does not, by itself, cause the Application to be governed by the AGPLv3. You may license your
+> Application under terms of your choice, including proprietary terms.
+>
+> **Limits.** This additional permission does not apply to Twenty itself: if you modify Twenty, the
+> AGPLv3, including section 13, applies to your modified version in full.
+
+AGPLv3 §13 is the network clause: anyone interacting with a modified Twenty over a network must be
+offered its complete source. For a hosted multi-tenant SaaS, that means **every modification we make
+to `twenty-server` or `twenty-front` must be published to our customers**, and any competitor who
+signs up can obtain it.
+
+So the brief's guidance "prefer extensions, avoid modifying core" is not just a maintainability
+preference here. It is the difference between a proprietary product and a published one. This
+should be treated as a hard architectural constraint, not a style preference.
+
+### Enterprise-licensed files
+
+314 files carry `/* @license Enterprise */`. The concentrations matter, because several are things
+the brief explicitly asks for:
+
+| Area | Files | Brief requirement it serves |
+| --- | --- | --- |
+| `core-modules/billing` + `billing-webhook` | 141 | §14 subscription plans |
+| `settings/roles` + `settings/security` (front) | 42 | §14 RBAC, MFA, session management |
+| `row-level-permission-predicate` (+ flat variant) | 25 | Per-team/per-agent record visibility in the Inbox |
+| `core-modules/sso` | 14 | §14 SSO |
+| `core-modules/usage`, `event-logs` | 27 | Usage metering, audit trail (§17 "AI actions must be auditable") |
+
+The commercial terms (`/LICENSE` ~line 726) permit copying and modifying these **for development and
+testing without a subscription**, but production use requires a valid Enterprise subscription for
+the correct host and seat count, and forbids redistribution.
+
+**Action required:** decide early whether we run Twenty EE (subscription) or build subscription
+billing and row-level permissions ourselves outside the Enterprise files. This affects the pricing
+model and should not be discovered at launch. Get written clarification from Twenty on what an
+Enterprise subscription costs for a multi-tenant reseller-style deployment.
+
+---
+
+## 3. Requirement → existing Twenty functionality
+
+Mapping `/docs/PRODUCT.md` §3 and §4 against what exists today.
+
+### Covered by Twenty as-is
+
+| Brief requirement | Twenty provides | Location |
+| --- | --- | --- |
+| Contacts | `Person` — name, emails, phones, jobTitle, linkedinLink, avatar, company, timeline, tasks, notes, attachments, search vector | `packages/twenty-server/src/modules/person/standard-objects/person.workspace-entity.ts` |
+| Companies | `Company` — name, domainName, address, annualRevenue, accountOwner, people, opportunities | `modules/company/standard-objects/company.workspace-entity.ts` |
+| Deals / Opportunities | `Opportunity` — amount (CURRENCY), closeDate, stage, probability, owner, pointOfContact, company | `modules/opportunity/standard-objects/opportunity.workspace-entity.ts` |
+| Pipelines | Opportunity `stage` + kanban views grouped by stage | view/view-group metadata |
+| Tasks, Notes | `Task`, `Note` + `TaskTarget`/`NoteTarget` polymorphic join objects | `modules/task`, `modules/note` |
+| Activities | `TimelineActivity`, and apps can register their own activity types | `modules/timeline`, `metadata-modules/timeline-activity-type` |
+| Custom objects & fields | Full metadata engine, 25 field types incl. `CURRENCY`, `FILES`, `RICH_TEXT`, `MORPH_RELATION`, `RAW_JSON`, `PHONES`, `ADDRESS` | `engine/metadata-modules/object-metadata`, `field-metadata` |
+| Views, filtering, sorting, grouping | `view`, `view-field`, `view-filter`, `view-group`, `view-sort` metadata | `engine/metadata-modules/view*` |
+| Permissions | Roles, object permissions, field permissions, permission flags, row-level predicates (EE) | `engine/metadata-modules/role`, `object-permission`, `row-level-permission-predicate` |
+| Workspaces / multi-tenancy | Postgres **schema per workspace** (`workspace_<base36 uuid>`), plus per-workspace `subdomain` and `customDomain` | `engine/workspace-datasource/utils/get-workspace-schema-name.util.ts`, `core-modules/workspace/workspace.entity.ts` |
+| APIs | GraphQL (core + metadata), REST, and MCP | `engine/api/graphql`, `engine/api/rest`, `engine/api/mcp` |
+| Webhooks (outbound) | `Webhook` entity with `targetUrl` + operation globs (`*.*`) | `engine/metadata-modules/webhook` |
+| Automation | Workflow engine: triggers `DATABASE_EVENT`, `MANUAL`, `CRON`, `WEBHOOK`; actions incl. `record-crud`, `http-request`, `if-else`, `iterator`, `delay`, `filter`, `form`, `mail-sender`, `ai-agent`, `logic-function` | `modules/workflow/workflow-executor/workflow-actions` |
+| Email / calendar sync | Gmail, Microsoft, IMAP/SMTP/CalDAV connectors; `Message`, `MessageThread`, `MessageParticipant`, `MessageChannel` | `modules/messaging`, `core-modules/imap-smtp-caldav-connection` |
+| Realtime record updates | SSE event stream keeps native record lists live | `engine/subscriptions`, front `modules/sse-db-event` |
+| Files / object storage | File storage abstraction with signed URLs, `FILES` field type | `core-modules/file`, `file-storage` |
+| Search | Per-object `TS_VECTOR` search fields | `core-modules/search` |
+| AI | Agents, skills, tool registry, model routing, AI-agent workflow action | `core-modules/tool`, `metadata-modules/ai` |
+| Subscription billing | Stripe integration, `PRO`/`ENTERPRISE` plans, entitlements, metering (**Enterprise-licensed**) | `core-modules/billing` |
+| SSO / auth | JWT, API keys, Google, Microsoft, OIDC, SAML, 2FA, approved access domains | `core-modules/auth` |
+
+### Not provided — we build it
+
+Conversations, messages, channel accounts, contact identities, assignment, saved replies, agent
+presence, typing indicators; products/services, quotations, invoices, line items, payment requests,
+PromptPay/Thai QR, bank transfer flows; accounting provider abstraction; web chat widget.
+
+The existing `Message`/`MessageThread` model is **email-specific** (`headerMessageId`, `subject`,
+`isDraft`, `deliveryStatus`, folder associations) and coupled to `ConnectedAccount` sync. Reusing it
+for LINE and Meta would mean bending an upstream-owned schema we do not control and cannot extend
+without an app anyway. **Do not reuse it — model our own `Conversation`/`Message` as app objects.**
+Read it as a design reference for participant matching, nothing more.
+
+---
+
+## 4. The extension mechanism (this is the important part)
+
+Twenty Apps are declared as TypeScript, built by the SDK CLI, and synced into a workspace. The full
+set of things an app can contribute is `Manifest` in
+`packages/twenty-shared/src/application/manifestType.ts`:
+
+```
+application         objects            fields             indexes
+logicFunctions      frontComponents    permissionFlags    roles
+skills              agents             connectionProviders
+publicAssets        views              viewFields
+navigationMenuItems pageLayouts        pageLayoutTabs
+commandMenuItems    timelineActivityTypes                 translations
+```
+
+The capabilities that matter for us:
+
+**Custom objects and fields** — `defineObject()`, `defineField()`. All 25 field types, relations
+(`ONE_TO_MANY`, `MANY_TO_ONE`, `MORPH_RELATION`), `onDelete` behaviour, indexes.
+
+**Fields on Twenty's own standard objects** — `defineField()` with
+`STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.person.universalIdentifier`. 28 standard objects are
+addressable this way (person, company, opportunity, note, task, message*, calendar*, workflow*,
+workspaceMember, …). Example: `packages/twenty-apps/fixtures/rich-app/src/fields/company-can-receive-postcards.field.ts`.
+This is how a `Conversation` relates to a `Person` without touching core.
+
+**Sidebar navigation** — `defineNavigationMenuItem()` with type `VIEW`, `OBJECT`, `LINK`, `FOLDER`
+or `PAGE_LAYOUT`. `FOLDER` nests children, so the brief's `Inbox → LINE / Facebook / Unassigned /
+Teams` tree in §3 is expressible directly.
+
+**Full-page custom screens** — a `PageLayout` of type `STANDALONE_PAGE` containing a
+`FRONT_COMPONENT` widget in a `CANVAS` tab, reached by a `PAGE_LAYOUT` navigation menu item. This is
+the Inbox screen. Verified: `PageLayoutType.STANDALONE_PAGE` at
+`twenty-shared/src/types/page-layout/PageLayoutType.ts`, rendered by
+`twenty-front/src/pages/page-layout/StandalonePageLayoutPage.tsx`, `FrontComponentConfiguration` in
+`page-layout-widget-configuration.type.ts`, nav item routing in
+`modules/navigation-menu-item/display/utils/getNavigationMenuItemComputedLink.ts`.
+
+**Tabs on standard record pages** — `definePageLayoutTab()` targeting
+`STANDARD_PAGE_LAYOUT_UNIVERSAL_IDENTIFIERS.personRecordPage`. This is the brief's §8 "Conversations"
+tab on a contact, in one file.
+
+**Server-side logic functions** — `defineLogicFunction()` with a TypeScript handler and any of:
+`httpRouteTriggerSettings` (authenticated HTTP route), `cronTriggerSettings`,
+`databaseEventTriggerSettings` (e.g. `people.created`, with optional `updatedFields`),
+`serverRouteTriggerSettings` (public webhook, see below), `toolTriggerSettings` (exposes the function
+as an AI agent tool), `workflowActionTriggerSettings` (exposes it as a workflow step). Executed by a
+driver (`local` child process in dev, `lambda` in production) with the app's environment variables
+injected.
+
+**Public unauthenticated routes** — two flavours, both important:
+
+1. `httpRouteTriggerSettings` with `isAuthRequired: false` — a public endpoint that can return
+   arbitrary HTML. `packages/twenty-apps/examples/document-generator/src/logic-functions/view-document.ts`
+   serves a printable document page this way. This is the mechanism for a customer-facing quotation
+   acceptance page and a PromptPay payment page.
+2. `serverRouteTriggerSettings` — a public route at `/webhooks/server/:logicFunctionUniversalIdentifier`
+   that runs a **resolver** function in the app publisher's workspace, which returns
+   `{ targetLogicFunctionUniversalIdentifier, workspaceId, payload }`; the platform then enqueues the
+   target function in **that tenant's** workspace with retry and backoff
+   (`engine/core-modules/server-route-trigger/server-route-trigger.service.ts`).
+
+   That second one is precisely the multi-tenant channel-webhook problem: **one LINE webhook URL,
+   many tenants**, resolved by the LINE `destination` field. It is worth reading the service before
+   designing anything else in the omnichannel layer.
+
+**Configuration and secrets** — `applicationVariables` (per-workspace, user-editable) and
+`serverVariables` (with `isSecret`, `isRequired`, typed, option lists) on `defineApplication()`.
+Provider credentials and per-organization bank details go here, never in code.
+
+**OAuth connections** — `defineConnectionProvider({ type: 'oauth', ... })` with authorization/token
+endpoints, scopes, PKCE, revocation, and a post-connect hook. Creates a `ConnectedAccount` in the
+tenant's workspace. This is the Meta (Messenger/Instagram/WhatsApp) onboarding path.
+
+**Roles and permissions** — `defineRole()` with object permissions, field permissions, permission
+flags and row-level predicates. Apps ship their own default role.
+
+**AI** — `defineAgent()` (prompt, model, response format, bound role) and `defineSkill()` (named
+instruction content). Combined with `toolTriggerSettings` on logic functions, the brief's §17 list
+(suggested replies, summaries, tagging, routing) is buildable without new infrastructure.
+
+**Distribution** — `yarn twenty dev` for the live-sync dev loop; `yarn twenty plan` prints a
+Terraform-style diff; `yarn twenty app:publish --private` deploys a tarball to our own server;
+`app:install` installs it. Private deployment does not require npm or the public marketplace.
+
+---
+
+## 5. Proposed minimum architecture
+
+### 5.1 Shape
+
+```
+Twenty (unmodified, upstream-tracking)
+│
+├── app: takdai-inbox            ← omnichannel
+│     objects    Conversation, Message, ChannelAccount, ContactIdentity, ConversationAssignment
+│     fields     conversations on Person, conversations on Company
+│     nav        Inbox (FOLDER) → All / Mine / Unassigned / per-channel views
+│     pages      STANDALONE_PAGE "Inbox"  → front component (3-pane UI)
+│                personRecordPage tab "Conversations" → front component
+│     functions  line-webhook-resolver (serverRoute, public)
+│                line-webhook-handler (per-tenant, queued)
+│                send-message (httpRoute, authenticated)
+│                match-or-create-contact (databaseEvent + tool)
+│
+├── app: takdai-sales            ← quotations, invoices, payments
+│     objects    Product, Quotation, QuotationLineItem, Invoice, InvoiceLineItem,
+│                PaymentRequest, Payment
+│     fields     quotations/invoices on Opportunity, Person, Company
+│     nav        Sales (FOLDER) → Products / Quotations / Invoices / Payments
+│     functions  render-quotation-pdf, quotation-accept (public HTML),
+│                payment-page (public HTML, PromptPay QR + bank transfer),
+│                verify-payment (cron or provider webhook)
+│
+└── app: thailiving-legal        ← installed only in the Thailiving workspace
+      objects    Matter, PracticeArea, DocumentChecklist, …
+```
+
+Three apps, not one. The split is the brief's §15 modularity requirement made enforceable: a
+workspace that does not install `thailiving-legal` cannot see it, and generic code cannot
+accidentally depend on it.
+
+`takdai-sales` may start as a separate app or as part of the inbox app; splitting later is cheap
+because objects are addressed by `universalIdentifier`, but moving an object *between* apps is not.
+Decide before the first `app:publish`.
+
+### 5.2 Where things live
+
+| Concern | Home | Why |
+| --- | --- | --- |
+| Contacts, companies, deals | Twenty standard objects | Already correct, and free UI, search, views, permissions |
+| Conversations, messages | App custom objects in the tenant's schema | Single source of truth, native views, native permissions, native search |
+| Channel provider adapters | Logic functions | Server-side, has secrets, no CORS |
+| Provider credentials | `serverVariables` / connection providers | Per-tenant, encrypted, never in code |
+| Inbox UI | Front component in a `STANDALONE_PAGE` | Only way to get a non-record-shaped screen |
+| Customer-facing pages | Public logic-function routes returning HTML | No separate web app needed for MVP |
+| Automation | Twenty workflows over app objects | The brief's §18 examples are all `DATABASE_EVENT` triggers on our objects |
+
+### 5.3 Deliberately *not* a separate service (yet)
+
+The brief's §24 sketches `services/omnichannel/` as its own deployable. For the MVP, keeping
+conversations as Twenty objects in the tenant schema buys a large amount for free: record views,
+filters, search, permissions, timeline, workflow triggers, the REST/GraphQL API, and SSE-backed
+live lists. A separate service would mean reimplementing all of that plus a sync layer, and would
+violate rule §28.5 (no two sources of truth).
+
+Extract a service later if and when a concrete pressure appears — sustained high-volume message
+ingest, or a channel needing long-lived socket connections. Until then the logic-function runtime
+plus the message queue is the omnichannel worker.
+
+### 5.4 The MVP lifecycle, end to end
+
+```
+LINE →  POST /webhooks/server/<resolver-uid>          (public, one URL, all tenants)
+     →  resolver fn: destination → workspaceId        (runs in publisher workspace)
+     →  queued handler fn in tenant workspace         (retry + backoff, built in)
+     →  upsert ContactIdentity → match/create Person  (CoreApiClient)
+     →  upsert Conversation + Message
+     →  agent opens Inbox (STANDALONE_PAGE front component)
+     →  reply → send-message fn → LINE Messaging API
+     →  create Opportunity (standard object)
+     →  create Quotation + line items (app objects)
+     →  render-quotation-pdf fn → FILES field
+     →  public accept page → Quotation.status = ACCEPTED
+     →  workflow: quotation.updated → create Invoice
+     →  payment-page fn → PromptPay QR / bank transfer details
+     →  verify-payment → Payment record → workflow: mark Opportunity won
+```
+
+Every arrow above uses a mechanism that exists today. Nothing in it requires a core change.
+
+---
+
+## 6. Conflicts between the brief and Twenty's architecture
+
+Ordered by how much they should change the plan.
+
+### 6.1 There is no Thai locale — blocking for a Thailand-first product
+
+`packages/twenty-shared/src/translations/constants/AppLocales.ts` lists 31 locales. `th-TH` is not
+among them, and there is no `th-TH.po` in `twenty-front/src/locales` or the server catalogs.
+
+This is not only a UI-language gap. App translations are typed as
+`Partial<Record<AppLocale, ...>>` (`manifestType.ts`), so **our app cannot ship Thai strings until
+the platform supports the locale.** The Thai market is the brief's §2 first principle.
+
+Options:
+
+1. **Contribute `th-TH` upstream.** `twenty-shared` is MIT, so no AGPL exposure; the front/server
+   catalogs are AGPL but a locale addition is exactly the kind of change upstream accepts. Best
+   outcome: no fork, and the constraint disappears. Do this first.
+2. **Carry a small patch** adding `th-TH` to the locale list. Touches ~3 files. Cheap to rebase, but
+   it is a core modification and therefore an AGPL §13 trigger for a locale list — a trivially
+   publishable diff, so the licence cost is near zero, but the merge cost recurs every upgrade.
+3. **Ship Thai only in our own UI surfaces** and leave Twenty's chrome in English. Front components
+   can carry their own strings independent of Lingui. Ugly for a Thai law firm's staff.
+
+Recommendation: (1), with (2) as the interim while the PR lands. Verify PO-file plumbing on both
+front and server before promising Thai in a demo.
+
+### 6.2 The front-component sandbox will not run shadcn/ui — conflicts with §23
+
+Front components execute in a Web Worker at an opaque origin and render through Remote DOM
+(`packages/twenty-front-component-renderer`). 120 HTML and SVG elements are bridged, with inline
+styles and CSS. But per `docs/developers/extend/apps/layout/front-components.mdx`, and confirmed in
+the renderer source:
+
+- `createPortal(node, document.body)` renders nothing while reporting success. **Radix, Headless UI,
+  MUI and react-select popovers render nothing by default.** shadcn/ui is Radix. Every dropdown,
+  select, dialog, tooltip and combobox in the Inbox is affected.
+- `ResizeObserver` and `IntersectionObserver` throw `ReferenceError`. Rules out recharts
+  `ResponsiveContainer`, Floating UI `autoUpdate`, and most virtualized-list libraries — and the
+  Inbox conversation list wants virtualization.
+- `ref.current.focus()`, `.click()`, `.scrollIntoView()`, `video.play()` all throw.
+  `document.activeElement` is always `undefined`. Keyboard-first UX (§23) needs care.
+- `<canvas>` renders nothing, silently. Use SVG.
+- Component CSS is injected into the host page's `<head>` **unscoped** — class names collide with
+  Twenty's, and bare element selectors leak into the whole app. Prefix everything.
+- `@media` matches the browser window, not the widget. Use `@container`.
+- `document.addEventListener` / `window.addEventListener` register without error and never fire — so
+  a drag stops the moment the pointer leaves its element.
+- Most failures are **silent**, and TypeScript does not catch them because the scaffold is typed
+  against the full DOM.
+
+The docs carry an explicit "under active development" warning.
+
+Consequences for the plan:
+
+- Budget for hand-built primitives (dropdown, combobox, modal, virtualized list) inside the sandbox,
+  or find a portal-free, observer-free component set. This is real work and the brief's §23
+  "use an existing component system rather than rebuilding basic UI primitives" partially cannot be
+  honoured inside front components.
+- Prefer native Twenty surfaces wherever the data is record-shaped. A conversation *list* can be a
+  Twenty view with filters, search, permissions and live SSE updates for free; only the message
+  thread pane genuinely needs a front component. A hybrid Inbox (native list + front-component
+  thread) is less custom UI and more native feel than a fully custom three-pane screen.
+- **Milestone 2 must be a real spike, not a mockup.** Build the fake Inbox with the actual
+  interactions (select a conversation, type a reply, open a dropdown, scroll a long list) and find
+  out where the sandbox bites. That is the point of the prototype.
+
+### 6.3 Realtime inside a front component is unsolved
+
+Twenty's own record lists stay live over SSE (`engine/subscriptions` + front `modules/sse-db-event`).
+That is host-side. Inside the sandbox, the documented network primitive is `fetch`; the renderer
+provides no `WebSocket` or `EventSource` bridge, `BroadcastChannel` is unavailable, and the worker's
+opaque origin makes a credentialed `EventSource` unlikely to authenticate.
+
+So a fully custom Inbox pane must **poll**. For an inbox, a few seconds is probably acceptable, but
+it undermines "typing indicators" and "agent presence" from §6. This is a second, independent
+argument for the hybrid approach in 6.2: native record views get realtime for free.
+
+Confirm the exact behaviour during the prototype rather than trusting this paragraph.
+
+### 6.4 Logto conflicts with Twenty's identity model — recommend dropping it for now
+
+§14 proposes evaluating Logto. Twenty already owns identity: `User`, `UserWorkspace`, `Workspace`,
+`WorkspaceMember`, roles, invitations, API keys, 2FA, and SSO via OIDC and SAML
+(`core-modules/auth`). The entire permission system, the workspace schema resolution, and the
+row-level predicates all key off Twenty's user model.
+
+Replacing it with Logto means modifying `twenty-server` deeply — the worst possible place from both
+the AGPL §13 and the upgrade-friction perspectives.
+
+Twenty's OIDC support means Logto *could* sit in front as an identity provider without a fork. But
+for the MVP that adds a moving part and a second user directory for no benefit the brief actually
+needs. Recommendation: **use Twenty's auth; revisit only if a specific requirement (a shared identity
+across Takdai + TLLACC, or an enterprise SSO deal) forces it.** Note that Twenty's SSO module is
+Enterprise-licensed.
+
+### 6.5 Quotation and invoice modelling has no native line-item primitive
+
+There is no repeating-group or line-item field type. Line items must be a child object with a
+`MANY_TO_ONE` relation back to the quotation (`QuotationLineItem`), which Twenty renders as a
+related-records table on the record page. That works, but composing a quotation means creating N+1
+records, and the native record UI is not a great line-item editor.
+
+The realistic answer is a front component for quotation editing that writes line items through
+`CoreApiClient` — with §6.2's caveats about how much UI we have to hand-build.
+
+`CURRENCY` fields store an amount plus a currency code, so Thai baht is fine. Tax is our own field;
+Twenty has no tax concept.
+
+### 6.6 PDF generation is unsolved but has a precedent
+
+No PDF library in the server. `packages/twenty-apps/examples/document-generator` solves the same
+problem inside an app: rich-text templates with `{{placeholders}}`, a public logic-function route
+rendering a printable HTML page, and PDFs saved back to the record — with no external API and no
+per-document cost. **Read this app before designing quotation/invoice output.** It is close to a
+direct answer to brief §9 and §20.
+
+### 6.7 Row-level permissions are Enterprise-licensed
+
+"Unassigned" / "My conversations" / "Teams" (§6) as *filters* need nothing special. As *security
+boundaries* — an agent must not read another team's conversations — they need row-level permission
+predicates, which are Enterprise. Decide whether inbox scoping is a view convenience or an access
+control guarantee, and price accordingly.
+
+### 6.8 Design language: two systems, by construction
+
+Twenty's front uses Linaria (zero-runtime CSS-in-JS) with its own theme and `twenty-ui`. Front
+components cannot import `twenty-ui` — different runtime, sandboxed. Our components will be
+hand-styled with inline styles and unscoped CSS, and matching Twenty's look is on us. `useColorScheme()`
+from `twenty-sdk/front-component` exposes light/dark so at least theme-following is possible.
+
+This is a foreseeable "doesn't feel native" risk against §2 "one product experience". Extract a
+shared internal style module (tokens, primitives) early and use it in every front component, rather
+than styling each screen ad hoc.
+
+### 6.9 Smaller frictions
+
+- **Cross-origin `fetch` from a front component** sends `Origin: null` — third-party APIs only answer
+  with `Access-Control-Allow-Origin: *`. Call third parties from logic functions. Provider secrets
+  belong there anyway.
+- **Sandbox storage caps**: 512-char keys, 262,144-char values, 1,048,576 chars per app per user.
+  Fine for UI state, not a message cache.
+- **Publishing requires a strictly increasing `package.json` version** (`VERSION_ALREADY_EXISTS`,
+  `CANNOT_DOWNGRADE_APPLICATION`). The local `yarn twenty dev` loop does not. Do not mix them.
+- **Logic function timeouts** are per-function (`timeoutSeconds`). Provider calls need explicit
+  budgets.
+- **No `th` number/date formatting helpers**; Buddhist-era dates, if needed, are ours.
+- **Web chat widget** (§7) has no host in Twenty. It is a separate static asset + a public logic
+  function route. Fine, but it is the first genuinely external piece.
+
+---
+
+## 7. Changes that would make upstream upgrades painful
+
+Ranked worst to least.
+
+1. **Editing `twenty-server` or `twenty-front` module code.** Triggers AGPL §13 for the whole
+   modified version and produces recurring merge conflicts in the fastest-moving parts of the repo.
+   Never do this for product features.
+2. **Adding columns to Twenty's standard workspace entities in code** (as opposed to via app
+   `defineField`). Standard objects are generated from `*.workspace-entity.ts` and reconciled by the
+   workspace migration engine; a hand-edited entity fights that engine on every upgrade.
+   `defineField` against `STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS` does the same job, supported.
+3. **Forking the `Message`/`MessageThread` model for omnichannel.** Couples us to an upstream schema
+   that changes with Gmail/IMAP work, for no gain over our own objects.
+4. **Patching `twenty-front` navigation, routing or the record page shell.** All three have
+   supported app-level equivalents (`defineNavigationMenuItem`, `STANDALONE_PAGE`,
+   `definePageLayoutTab`). If a designer asks for something these cannot do, change the design before
+   changing the shell.
+5. **Editing `.po` catalogs or `AppLocales`.** Small and mechanical, but `lingui extract` regenerates
+   catalogs with thousands of lines of churn (see the upstream section of `CLAUDE.md`), so locale
+   patches conflict noisily. Upstreaming `th-TH` avoids this entirely.
+6. **Editing `CLAUDE.md` at the repo root** (which this change does). Trivial, but it will conflict
+   on every upgrade. Kept deliberately: the project rules must be the first thing an agent reads.
+
+Rules of thumb:
+
+- Product code lives in apps. Core changes are only for things with no extension point, and each one
+  needs a written justification and, where possible, an upstream PR.
+- Track `upstream/main` continuously, not in six-month jumps.
+- `yarn twenty plan` before every sync so metadata drift is visible rather than discovered.
+
+---
+
+## 8. Recommended next steps
+
+**Milestone 1 — prove the chassis (this document, plus a running instance).**
+Run `bash packages/twenty-utils/setup-dev-env.sh` and `yarn start` against an unmodified checkout.
+Create a Thailiving Law workspace. Confirm custom objects, custom fields on `Person`, a saved view,
+role assignment, and the REST/GraphQL APIs by hand.
+
+**Milestone 2 — the fake Inbox, as a real spike.**
+`npx create-twenty-app takdai-inbox`, then:
+
+- `Conversation`, `Message`, `ContactIdentity` objects, with a `conversations` relation on `Person`
+- a `STANDALONE_PAGE` page layout with a `CANVAS` front-component widget
+- a `PAGE_LAYOUT` navigation menu item labelled "Inbox"
+- a `Conversations` tab on `personRecordPage`
+- hardcoded conversations, but **one real link to a real Twenty `Person`**
+
+Then answer, with evidence: does a dropdown render? does a 500-row list scroll acceptably? does
+keyboard navigation work? how far is the styling from native? how stale is polled data? Write the
+answers down — they decide how much of the Inbox is a front component versus native views.
+
+Commit as `prototype: add omnichannel inbox shell`.
+
+**Milestone 3 — real data.** Replace the fake data with the app's own objects, still no channel.
+
+**Milestone 4 — LINE OA.** `serverRouteTriggerSettings` resolver + per-tenant handler, prove
+`LINE → Inbox → Person → reply → LINE`.
+
+**Milestone 5 — quotations → invoices → PromptPay**, starting from the `document-generator` example.
+
+Explicitly out of scope until milestone 5 lands: Midday, FlowAccount, CMS, AI agents, Plausible,
+document extraction, HR, TLLACC integration.
+
+---
+
+## 9. Decisions needed from the business
+
+1. **Twenty Enterprise subscription — yes or no?** Determines whether we get billing, SSO, row-level
+   permissions and audit logs, or build around them. Get a quote for a multi-tenant deployment.
+2. **Is inbox team-scoping an access-control guarantee or a view filter?** Drives (1).
+3. **Thai locale:** upstream PR, local patch, or English chrome for launch?
+4. **Logto — drop for MVP?** Recommendation is yes.
+5. **One app or three?** Recommendation is three; it is much cheaper to decide now than after the
+   first publish.
+
+---
+
+## 10. Key files
+
+| Topic | Path |
+| --- | --- |
+| Licence, incl. Application Exception | `LICENSE` (lines 1–55 and ~726) |
+| App manifest, the definitive capability list | `packages/twenty-shared/src/application/manifestType.ts` |
+| SDK `define*` helpers | `packages/twenty-sdk/src/sdk/define/` |
+| App docs | `packages/twenty-docs/developers/extend/apps/` |
+| Front-component sandbox limits | `packages/twenty-docs/developers/extend/apps/layout/front-components.mdx` |
+| Multi-tenant public webhook dispatch | `packages/twenty-server/src/engine/core-modules/server-route-trigger/server-route-trigger.service.ts` |
+| Widget configuration types | `packages/twenty-shared/src/types/page-layout/page-layout-widget-configuration.type.ts` |
+| Standard object identifiers for apps | `packages/twenty-shared/src/metadata/constants/standard-object-universal-identifiers.constant.ts` |
+| Standard page layout identifiers | `packages/twenty-shared/src/metadata/constants/standard-page-layout-universal-identifiers.constant.ts` |
+| Reference app using most of the SDK | `packages/twenty-apps/examples/document-generator/` |
+| Reference app exercising every manifest entity | `packages/twenty-apps/fixtures/rich-app/` |
+| Locale list (no `th-TH`) | `packages/twenty-shared/src/translations/constants/AppLocales.ts` |
+| Front component renderer | `packages/twenty-front-component-renderer/` |
