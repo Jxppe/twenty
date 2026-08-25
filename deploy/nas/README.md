@@ -263,6 +263,51 @@ Or put Twenty inside the Tailscale container's network namespace, which gives it
 and drop the `ports:` block, since it no longer has a network of its own. Cleaner, at the cost of a
 start-order dependency between the two containers.
 
+## Known: logic functions do not work on UGOS Pro
+
+MEASURED on a UGREEN NAS, and unresolved.
+
+Logic functions call back into Twenty's API at `SERVER_URL` (see above). On UGOS Pro the Docker
+bridge cannot reach the host, so nothing inside the container can reach that address whatever it is
+set to. Confirmed from inside the container: the NAS's own LAN address and the Tailscale interface
+both time out with `UND_ERR_CONNECT_TIMEOUT`, while DNS resolution succeeds.
+
+Two workarounds tried:
+
+- **`extra_hosts` mapping the hostname to the Tailscale IP.** Resolution works, the connection still
+  times out. The bridge has no route to that interface.
+- **`network_mode: host`.** Would fix it, and cannot be used: the all-in-one image runs its own Redis
+  and Postgres, and on host networking Redis fails to bind 6379 because something on the NAS already
+  owns it. The container dies on startup.
+
+So the instance runs with `SERVER_URL: http://<nas-ip>:2020` on a normal bridge with a published
+port. The CRM works. Logic functions return 500 with `ROUTE_TRIGGER_USER_UNCAUGHT_ERROR` and "fetch
+failed".
+
+**What this costs later:** the client-facing booking and payment pages, the FlowAccount integration
+and the AI qualification hook are all logic functions. This has to be solved before any of them
+ship. It is a NAS network policy question, not a Twenty one.
+
+Where to start next time, from inside the container:
+
+```bash
+sudo docker exec twenty-app-dev node -e "fetch('http://172.18.0.1:2020/healthz').then(r=>console.log(r.status)).catch(e=>console.log('ERR',e.cause?.code))"
+sudo docker exec twenty-app-dev node -e "fetch('http://<nas-ip>:9999').then(r=>console.log(r.status)).catch(e=>console.log('ERR',e.cause?.code))"
+sudo docker exec twenty-app-dev node -e "fetch('https://example.com').then(r=>console.log(r.status)).catch(e=>console.log('ERR',e.cause?.code))"
+```
+
+Docker gateway, LAN, internet. Which of the three succeed says what is blocked and therefore what to
+change. If only the internet works, it is UGOS firewall policy on the bridge. Freeing port 6379 on
+the NAS also reopens the host-networking option, which is the clean fix.
+
+## Tailscale, given the above
+
+`tailscale serve` works for browsers but makes `SERVER_URL` a name the container cannot reach, which
+is how the logic-function failure was found. Until the bridge problem is solved, prefer **subnet
+routes**: advertise the LAN from a Tailscale node, approve the route in the admin console, and
+`http://<nas-ip>:2020` works from every tailnet device with the same URL as on the LAN. One address
+for browsers and, in principle, for the container.
+
 ## When it misbehaves
 
 **Signs in and bounces straight back out, or assets 404.** `SERVER_URL` does not match the URL in
