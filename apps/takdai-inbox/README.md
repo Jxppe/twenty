@@ -122,8 +122,8 @@ path, not the dev loop.
 
 ## Patched dependency: twenty-sdk
 
-`.yarn/patches/twenty-sdk-npm-2.35.0-*.patch` fixes a Windows-only bug in the SDK. The manifest
-builder derives `sourceHandlerPath` / `sourceComponentPath` with `path.relative`, which returns
+`scripts/fix-twenty-sdk-windows-paths.mjs` fixes a Windows-only bug in the SDK. The manifest builder
+derives `sourceHandlerPath` / `sourceComponentPath` with `path.relative`, which returns
 `src\logic-functions\seed-demo-data.ts` on Windows, and the server rejects any resource path
 containing backslashes:
 
@@ -132,8 +132,30 @@ INVALID_LOGIC_FUNCTION_INPUT: Resource path must not contain backslashes
 INVALID_FRONT_COMPONENT_INPUT: Resource path must not contain backslashes
 ```
 
-The patch normalizes those five `path.relative` call sites to forward slashes. It is a no-op on
-macOS and Linux, since Node already returns `/` there, and Windows accepts `/` in filesystem calls.
+The script normalizes those call sites in the installed bundle to forward slashes. It is idempotent,
+and a no-op on macOS and Linux where `path.relative` already returns `/`. Windows accepts forward
+slashes in filesystem calls, so normalizing is safe everywhere.
 
-`yarn install` applies it automatically. On an SDK upgrade the patch will need regenerating
-(`yarn patch twenty-sdk`), or dropping if upstream has fixed it. Worth reporting upstream.
+It runs automatically as a `postinstall`. It is a plain node script rather than a `yarn patch` on
+purpose: it works with any package manager, and it can be run by hand when the toolchain is broken.
+
+```sh
+node scripts/fix-twenty-sdk-windows-paths.mjs
+```
+
+On an SDK upgrade the script will warn that it could not find the call sites, and will need updating
+or dropping if upstream has fixed it. Worth reporting upstream.
+
+## When yarn will not run
+
+Corepack can fail silently on Windows, leaving `yarn --version` printing nothing and every `yarn`
+command a no-op. The CLI does not need yarn: it is a plain node bundle in `node_modules`, so invoke
+it directly.
+
+```sh
+node node_modules/twenty-sdk/dist/cli.cjs plan
+node node_modules/twenty-sdk/dist/cli.cjs apply
+node node_modules/twenty-sdk/dist/cli.cjs dev
+```
+
+`yarn twenty <command>` and `node node_modules/twenty-sdk/dist/cli.cjs <command>` are the same thing.
