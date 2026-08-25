@@ -1,0 +1,78 @@
+name: tll-crm
+
+services:
+  server:
+    image: twentycrm/twenty:${TAG:-latest}
+    ports:
+      - "${HOST_PORT:-3000}:3000"
+    volumes:
+      - server-local-data:/app/packages/twenty-server/.local-storage
+    environment:
+      NODE_PORT: 3000
+      PG_DATABASE_URL: postgres://${PG_DATABASE_USER:-postgres}:${PG_DATABASE_PASSWORD}@db:5432/${PG_DATABASE_NAME:-default}
+      REDIS_URL: redis://redis:6379
+      SERVER_URL: ${SERVER_URL}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      STORAGE_TYPE: local
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail http://localhost:3000/healthz
+      interval: 5s
+      timeout: 5s
+      retries: 60
+    restart: unless-stopped
+
+  worker:
+    image: twentycrm/twenty:${TAG:-latest}
+    command: ["yarn", "worker:prod"]
+    volumes:
+      - server-local-data:/app/packages/twenty-server/.local-storage
+    environment:
+      PG_DATABASE_URL: postgres://${PG_DATABASE_USER:-postgres}:${PG_DATABASE_PASSWORD}@db:5432/${PG_DATABASE_NAME:-default}
+      REDIS_URL: redis://redis:6379
+      SERVER_URL: ${SERVER_URL}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      STORAGE_TYPE: local
+      DISABLE_DB_MIGRATIONS: "true"
+      DISABLE_CRON_JOBS_REGISTRATION: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${PG_DATABASE_NAME:-default}
+      POSTGRES_USER: ${PG_DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${PG_DATABASE_PASSWORD}
+    healthcheck:
+      test: pg_isready -U ${PG_DATABASE_USER:-postgres} -h localhost -d postgres
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis
+    command: ["--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+# Named volumes rather than NAS share paths: Postgres needs POSIX permissions
+# and ownership that most NAS shares (and every SMB mount) do not provide.
+volumes:
+  db-data:
+  server-local-data:
