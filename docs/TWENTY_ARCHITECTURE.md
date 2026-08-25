@@ -374,6 +374,25 @@ Two consequences worth knowing before this lands:
 - The client-facing quotation, payment and booking pages are our own HTML and were never affected by
   `AppLocales`. They can be bilingual today.
 
+### 6.1b Two things an app manifest cannot express
+
+Found while building the Matter page.
+
+**Relabelling a standard object.** `updateObject` accepts `labelSingular`, `labelPlural` and `icon`
+with no guard on standard objects, but there is no manifest entry for it: the SDK's object manifest
+only defines *our* objects. So the relabel has to run through the metadata API, and the place for
+that is `definePostInstallLogicFunction`, which the CLI picks up automatically and re-runs on version
+upgrade. Remember `isLabelSyncedWithName: false` in the same update or the label snaps back.
+
+**Pinning a record-page widget to one of our fields.** `PageLayoutWidgetConfiguration` of type
+`FIELD` requires `fieldMetadataId`, a runtime workspace UUID. The manifest serializer only rewrites
+properties typed as relations into `...UniversalIdentifier` form, and this one is a plain string, so
+there is nothing an app can put there. A custom tab showing "deadlines for this matter" as a table
+is therefore not declarable today. Relation fields still appear on the record page through Twenty's
+own layout, which covers most of the need.
+
+---
+
 ### 6.2 The front-component sandbox will not run shadcn/ui — conflicts with §23
 
 Front components execute in a Web Worker at an opaque origin and render through Remote DOM
