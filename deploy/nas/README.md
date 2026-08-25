@@ -32,10 +32,21 @@ included. Login redirects are built from it.
 
 Data lives in the two named volumes, so it survives restarts, reboots and image upgrades.
 
-### With Tailscale, use the tailnet name
+### Changing the address later is cheap
 
-Better than the LAN IP, and worth doing from the start, because changing `SERVER_URL` later means
-recreating the container.
+`SERVER_URL` is set when the container is created, but the data is in the two named volumes, not in
+the container. So changing it costs:
+
+```bash
+docker rm -f twenty-app-dev
+# same docker run, new SERVER_URL
+```
+
+Nothing is lost. Start with the LAN address and get it running; decide about Tailscale afterwards.
+
+### With Tailscale
+
+Two ways in, and which one applies depends on where Tailscale runs.
 
 **Quick version.** Point `SERVER_URL` at the MagicDNS name instead of the LAN address:
 
@@ -46,7 +57,20 @@ SERVER_URL=http://nas.your-tailnet.ts.net:2020
 Works from the office, from home and from a phone, with no port forwarding and nothing exposed to
 the internet.
 
-**Better version: real HTTPS, no port in the URL.** On the NAS, with Tailscale running on the host:
+**If Tailscale is a container rather than a host service**, `serve` proxies to that container's own
+localhost, so Twenty has to share its network namespace:
+
+```yaml
+services:
+  twenty:
+    image: twentycrm/twenty-app-dev:latest
+    network_mode: service:tailscale
+```
+
+Twenty then gets its own tailnet identity, separate from the NAS. More moving parts; worth it only
+once you want that.
+
+**With Tailscale on the host: real HTTPS, no port in the URL.**
 
 ```bash
 sudo tailscale serve --bg 2020
@@ -58,19 +82,23 @@ That puts a Let's Encrypt certificate in front of the container, so the CRM answ
 and HTTPS certificates enabled in the tailnet admin console under DNS. `sudo tailscale serve --bg
 off` undoes it.
 
-If Tailscale runs in a container on the NAS rather than on the host, `serve` proxies to that
-container's own localhost, not the NAS, so it needs host networking to work. Check before assuming.
+**Simplest of all: subnet routes.** If the Tailscale node already advertises your LAN, every tailnet
+device can reach the NAS at its LAN address, and the URL you started with keeps working from
+anywhere with nothing to change. Check with `tailscale status` before doing anything more elaborate.
 
 **Three things to know:**
 
-- **`SERVER_URL` holds one address.** Pick the tailnet name and use it everywhere, on the LAN too.
-  Setting it to the LAN IP and then connecting over Tailscale gives you redirects to an address the
-  remote client cannot reach.
+- **`SERVER_URL` holds one address**, so pick which one the CRM answers on. The LAN IP works
+  remotely only if a subnet route covers it; otherwise use the tailnet name everywhere, including
+  on the LAN.
 - **Every device that uses the CRM needs Tailscale.** No Tailscale, no name resolution, no access.
   Fine for staff laptops and phones; it means clients can never reach it, which for the CRM itself
   is correct.
 - **Do not use Funnel.** Funnel publishes to the open internet. Serve stays inside the tailnet.
   Client-facing pages, when they exist, are a separate decision and want their own hostname.
+
+**A Windows VM is not a shortcut.** Docker there means Docker Desktop and WSL2 nested inside the
+NAS hypervisor. Run it on the NAS host instead.
 
 ### When to move off it
 
