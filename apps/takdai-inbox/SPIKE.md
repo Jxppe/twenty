@@ -9,14 +9,22 @@ how much becomes native Twenty views.
 
 ## Running it
 
+You do **not** need to build the Twenty monorepo. The CLI runs a prebuilt Twenty
+in Docker with a seeded demo workspace, and authenticates itself against it.
+
 ```sh
-# in the twenty checkout, with a local server already up (yarn start)
 cd apps/takdai-inbox
-yarn twenty remote:add --url http://localhost:3000
-yarn twenty dev
+yarn install
+yarn twenty docker:start   # pulls the image, serves on http://localhost:2020
+yarn twenty dev            # watch and sync on every change
 ```
 
-Then open the workspace. The sidebar gets an **Inbox** folder with three entries:
+Open http://localhost:2020 and sign in with `tim@apple.dev` / `tim@apple.dev`.
+`yarn twenty docker:status` prints the URL, version and credentials if you lose them.
+
+To sync into an existing Twenty instead, `yarn twenty remote:add --url <url>` and skip `docker:start`.
+
+The sidebar gets an **Inbox** folder with three entries:
 
 | Entry | What it is |
 | --- | --- |

@@ -60,14 +60,19 @@ reused, styled from `useTheme()` so it matches the workspace theme.
 ## Developing
 
 The app is a standalone Yarn project, not part of Twenty's workspace. It needs a running Twenty
-instance to sync against.
+instance to sync against, but not a built monorepo: the CLI runs one in Docker for you.
 
 ```sh
 yarn install
-yarn twenty remote:add --url http://localhost:3000
-yarn twenty dev          # watch and sync on every change
-yarn twenty plan         # show what a sync would change, without applying it
+yarn twenty docker:start   # prebuilt Twenty on http://localhost:2020, CLI auto-authenticated
+yarn twenty dev            # watch and sync on every change
+yarn twenty plan           # show what a sync would change, without applying it
 ```
+
+Demo login is `tim@apple.dev` / `tim@apple.dev`; `yarn twenty docker:status` reprints it.
+`yarn twenty docker:reset` wipes the local data and starts clean.
+
+To target an existing instance instead, `yarn twenty remote:add --url <url>` and skip `docker:start`.
 
 Checks:
 
