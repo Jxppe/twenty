@@ -9,7 +9,7 @@ Audited revision: `1d83c2e5` (upstream `main`), Twenty version 2.35.x, Nx/Yarn 4
 | Label | Meaning |
 | --- | --- |
 | **VERIFIED** | Read in the source at the cited path, or observed running in the prototype |
-| **MEASURED** | Observed in `apps/takdai-inbox` against a live local Twenty |
+| **MEASURED** | Observed in `apps/tll-crm` against a live local Twenty |
 | **PROPOSED** | Our design. Not built, not validated |
 
 Sections 2 to 4 and 6.1 to 6.3 are VERIFIED. Section 5 is PROPOSED. Section 6.4 onward mixes both
@@ -251,7 +251,7 @@ first `app:publish`, because an object cannot be moved between apps afterwards.
 ```
 Twenty (unmodified, upstream-tracking)
 │
-├── app: takdai-inbox            ← omnichannel
+├── app: tll-crm                 ← our app
 │     objects    Conversation, Message, ChannelAccount, ContactIdentity, ConversationAssignment
 │     fields     conversations on Person, conversations on Company
 │     nav        Inbox (FOLDER) → All / Mine / Unassigned / per-channel views
@@ -552,14 +552,14 @@ Run `bash packages/twenty-utils/setup-dev-env.sh` and `yarn start` against an un
 Create a Thailiving Law workspace. Confirm custom objects, custom fields on `Person`, a saved view,
 role assignment, and the REST/GraphQL APIs by hand.
 
-**Milestone 2 — the Inbox spike.** Built: `apps/takdai-inbox`. It ships the four omnichannel
+**Milestone 2 — the Inbox spike.** Built: `apps/tll-crm`. It ships the four omnichannel
 objects, a `conversations` relation on the standard `Person`, a `STANDALONE_PAGE` Inbox reached from
 a sidebar folder, a `Conversations` tab on `personRecordPage`, native record views over the same
 data, and a seed function so a fresh workspace has content.
 
 It is a spike, not a mockup: it reads and writes real records through `RestApiClient` and carries a
 hand-rolled dropdown and an on-screen fetch-timing readout specifically to answer the sandbox
-questions. `apps/takdai-inbox/SPIKE.md` is the checklist to fill in while running it. Those answers
+questions. `apps/tll-crm/SPIKE.md` is the checklist to fill in while running it. Those answers
 decide how much of the Inbox stays a front component and how much becomes native views.
 
 **Milestone 3 — LINE-shaped data.** Replace the seed function with an ingest path, still no live
@@ -589,7 +589,7 @@ document extraction, HR, TLLACC integration.
 
 ## 9b. Prototype results — MEASURED
 
-`apps/takdai-inbox` was built and run against a local Twenty 2.35 to test the claims above. What a
+`apps/tll-crm` was built and run against a local Twenty 2.35 to test the claims above. What a
 running instance established:
 
 ### Confirmed working
@@ -682,7 +682,7 @@ work-item type.
 
 ### Windows toolchain findings
 
-Three real obstacles, all now documented in `apps/takdai-inbox/README.md`:
+Three real obstacles, all now documented in `apps/tll-crm/README.md`:
 
 1. Twenty's longest tracked path is **241 characters**; a full checkout exceeds Windows' 260 limit
    and aborts. Sparse-checkout of the app alone (92 characters) avoids it.
@@ -717,4 +717,4 @@ Finding 3 is an architectural constraint, not a footnote.
 | Locale list (no `th-TH`) | `packages/twenty-shared/src/translations/constants/AppLocales.ts` |
 | Front component renderer | `packages/twenty-front-component-renderer/` |
 | Timeline activity types (client history) | `packages/twenty-shared/src/application/timelineActivityTypeManifestType.ts` |
-| Our prototype and its spike checklist | `apps/takdai-inbox/`, `apps/takdai-inbox/SPIKE.md` |
+| Our prototype and its spike checklist | `apps/tll-crm/`, `apps/tll-crm/SPIKE.md` |

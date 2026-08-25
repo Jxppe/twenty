@@ -7,7 +7,7 @@ is kept here for two reasons: the domain model is hard-won and transfers unchang
 it, and TLL will be its first user, so the **contract** between the messaging layer and the CRM has
 to be right.
 
-Built so far: `apps/takdai-inbox`, a prototype that proved the Twenty extension path. See
+Built so far: `apps/tll-crm`, a prototype that proved the Twenty extension path. See
 [`TWENTY_ARCHITECTURE.md`](./TWENTY_ARCHITECTURE.md) §9b for what it established.
 
 ---

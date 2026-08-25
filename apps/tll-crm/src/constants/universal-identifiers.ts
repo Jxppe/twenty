@@ -1,5 +1,5 @@
-export const APP_DISPLAY_NAME = 'Takdai Inbox';
-export const APP_DESCRIPTION = 'Omnichannel inbox: LINE, Meta, email and web chat conversations linked to Twenty contacts';
+export const APP_DISPLAY_NAME = 'TLL CRM';
+export const APP_DESCRIPTION = 'Practice management for Thailiving Law, Unique X Services and Pattaya Notary';
 export const APPLICATION_UNIVERSAL_IDENTIFIER = '3125f1d9-36dc-4ee7-b38f-db199270e29a';
 export const DEFAULT_ROLE_UNIVERSAL_IDENTIFIER = '43db3557-522f-458c-af24-ae5f96941972';
 export const MAIN_PAGE_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER =

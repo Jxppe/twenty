@@ -13,7 +13,7 @@ You do **not** need to build the Twenty monorepo. The CLI runs a prebuilt Twenty
 in Docker with a seeded demo workspace, and authenticates itself against it.
 
 ```sh
-cd apps/takdai-inbox
+cd apps/tll-crm
 yarn install
 yarn twenty docker:start   # pulls the image, serves on http://localhost:2020
 yarn twenty dev            # watch and sync on every change

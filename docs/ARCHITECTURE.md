@@ -7,7 +7,7 @@ Read [`DECISIONS.md`](./DECISIONS.md) for why things are the way they are,
 [`REFERENCES.md`](./REFERENCES.md) before building anything substantial.
 
 Status: **PROPOSED**, except where it restates a verified Twenty capability. Built so far: the
-omnichannel prototype in `apps/takdai-inbox`, which predates D4 and will be renamed.
+omnichannel prototype now living in `apps/tll-crm`, which predates D4.
 
 ---
 
@@ -116,7 +116,7 @@ twenty/                     upstream, tracked, unmodified
 
 apps/
   tll-crm                   matters, bookings, work logs, sales, payments
-                            (currently apps/takdai-inbox, to be renamed)
+                            (also holds the omnichannel prototype, kept as evidence)
 ```
 
 One app unless there is a reason for two. The three-app split was there to keep a commercial product

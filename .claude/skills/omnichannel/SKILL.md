@@ -10,7 +10,7 @@ Full model in `docs/OMNICHANNEL.md`.
 ## 0. Scope: this is Takdai's, not this repository's
 
 Under D4, Takdai is a separate product built elsewhere and owns the omnichannel layer. The prototype
-in `apps/takdai-inbox` proved the Twenty extension path and is not the product.
+in `apps/tll-crm` proved the Twenty extension path and is not the product.
 
 These rules are kept for two reasons: the domain model transfers unchanged to whatever builds it, and
 TLL will be its first user, so the **contract** between the messaging layer and this CRM has to be

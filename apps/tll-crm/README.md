@@ -1,4 +1,4 @@
-# Takdai Inbox
+# TLL CRM
 
 Omnichannel inbox for Twenty: LINE, Meta, email and web chat conversations in one place, linked to
 Twenty contacts.
@@ -75,7 +75,7 @@ cd C:\ && mkdir dev && cd dev
 git clone --no-checkout --filter=blob:none https://github.com/Jxppe/twenty.git
 cd twenty
 git sparse-checkout init --cone
-git sparse-checkout set apps/takdai-inbox docs
+git sparse-checkout set apps/tll-crm docs
 git checkout claude/twenty-crm-audit-h5qrnv
 ```
 
