@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { defineFrontComponent } from 'twenty-sdk/define';
 import { AppPath, navigate, useRecordId } from 'twenty-sdk/front-component';
-import { Tag } from 'twenty-ui/data-display';
-import { Button } from 'twenty-ui/input';
 import { useTheme } from 'twenty-ui/theme-constants';
 import { RestApiClient } from 'twenty-client-sdk/rest';
 
@@ -12,6 +10,8 @@ import {
   type Channel,
 } from 'src/constants/channels';
 import { PERSON_CONVERSATIONS_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER } from 'src/constants/universal-identifiers';
+import { Badge } from 'src/ui/Badge';
+import { Button } from 'src/ui/Button';
 
 type PersonConversation = {
   id: string;
@@ -114,9 +114,9 @@ const PersonConversations = () => {
           }}
         >
           {conversation.channel !== null && (
-            <Tag
+            <Badge
               text={CHANNEL_LABELS[conversation.channel]}
-              color={CHANNEL_COLORS[conversation.channel] as never}
+              color={CHANNEL_COLORS[conversation.channel]}
             />
           )}
           <span
@@ -132,8 +132,6 @@ const PersonConversations = () => {
           </span>
           <Button
             title="Open"
-            size="small"
-            variant="secondary"
             onClick={() =>
               void navigate(AppPath.RecordShowPage, {
                 objectNameSingular: 'conversation',

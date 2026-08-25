@@ -3,8 +3,15 @@
 /.idea
 .claude/*
 !.claude/settings.json
-# our project skills are documentation, not local agent state
-!.claude/skills/
+# our project skills are documentation, not local agent state; third-party
+# skills installed with `skills add` land in .claude/skills too, so list ours
+!.claude/skills/finance/
+!.claude/skills/matters/
+!.claude/skills/omnichannel/
+!.claude/skills/saas-ui/
+!.claude/skills/thai-payments/
+!.claude/skills/twenty-extension/
+.agents/
 .cursor/debug-*.log
 **/**/node_modules/
 .cache
@@ -72,3 +79,4 @@ screenshots/
 /.diag*.mjs
 /.compare*.mjs
 /.narrow*.mjs
+skills-lock.json

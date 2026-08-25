@@ -1,3 +1,5 @@
+import { type BadgeColor } from 'src/ui/Badge';
+
 export const CHANNELS = [
   'LINE',
   'FACEBOOK',
@@ -18,7 +20,7 @@ export const CHANNEL_LABELS: Record<Channel, string> = {
   WEBCHAT: 'Web chat',
 };
 
-export const CHANNEL_COLORS: Record<Channel, string> = {
+export const CHANNEL_COLORS: Record<Channel, BadgeColor> = {
   LINE: 'green',
   FACEBOOK: 'blue',
   INSTAGRAM: 'pink',

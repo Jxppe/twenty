@@ -14,8 +14,12 @@ Our screens sit inside Twenty's chrome. A second scale is visible as a seam on e
 - `useTheme()` from `twenty-ui/theme-constants` for spacing, colour, radius, typography.
 - **No hex literals in product code.**
 - `theme.spacing[2]`, not `theme.spacing(2)`: it is a token record, not a callable.
-- `twenty-ui` components where they exist: `Button`, `Tag`, `Status`, `Chip`, `Avatar`, `Icon*`,
-  the typography set. They follow light and dark automatically.
+- **Take tokens from `twenty-ui`, not components.** MEASURED: `Button`, `Tag`, `Status`, `Avatar` and
+  the typography set arrive **unstyled** in a front component, because their Linaria classes do not
+  reach the sandbox. A `Button` renders as its icon and label stacked with no chrome.
+- `Icon*` works (plain SVG taking `size` and `color`), and so does `useTheme()`.
+- Inline-styled primitives live in each app's `src/ui/`: `Button`, `Badge`, `Initial`, `FilterChips`.
+  Reuse them; add to them rather than reaching for `twenty-ui/input` again.
 - Import from subpaths (`twenty-ui/input`), and never `IconsProvider`/`useIcons`, which pull in
   several MB of icons.
 
@@ -50,8 +54,10 @@ only supports a sales forecast (probability, weighted value) comes off the page.
 
 Verified, not theoretical. Front components run in a Web Worker behind Remote DOM:
 
-- `createPortal` renders nothing, silently. **No Radix, base-ui, Headless UI or MUI overlays.** Every
-  dropdown, dialog, tooltip and combobox is hand-built with `position: absolute` inside its own tree.
+- `createPortal` renders nothing, silently. **No Radix, base-ui, Headless UI or MUI overlays.**
+- **Hand-built overlays do not work either.** MEASURED: a `position: absolute` menu inside its own
+  tree renders correctly and receives no pointer events, so its options respond to neither hover nor
+  click. Selecting on `mousedown` and tracking hover in state both failed to change it.
 - `ResizeObserver` throws. No virtualized lists, no responsive chart containers. Long lists belong in
   native Twenty views.
 - `<canvas>` renders nothing. Use SVG.
@@ -59,9 +65,12 @@ Verified, not theoretical. Front components run in a Web Worker behind Remote DO
 - `@media` matches the browser window, not the widget. Use `@container`.
 - `document.activeElement` is undefined; `ref.focus()` throws. Track focus with `onFocus`/`onBlur`.
 
-**Anything that floats above the page is expensive.** Prefer a panel or inline control.
+**So: no floating UI in a front component.** Use an in-flow control instead: a chip row, a
+segmented control, an inline expanding panel. For a long list, use a native Twenty view, which is
+outside the sandbox and has real dropdowns.
 
-Overlay primitives live in each app's `src/ui/`, built once and reused.
+This is a constraint on the design, not a bug to work around. Every attempt so far has cost more
+than the control was worth.
 
 ## 5. Empty, loading and error states
 

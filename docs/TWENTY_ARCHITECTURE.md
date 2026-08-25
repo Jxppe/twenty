@@ -384,6 +384,18 @@ the renderer source:
 - `createPortal(node, document.body)` renders nothing while reporting success. **Radix, Headless UI,
   MUI and react-select popovers render nothing by default.** shadcn/ui is Radix. Every dropdown,
   select, dialog, tooltip and combobox in the Inbox is affected.
+- **MEASURED, and worse than the portal problem: a hand-built floating menu renders but never
+  receives pointer events.** The prototype's channel filter drew its menu correctly with
+  `position: absolute` inside its own tree, no portal involved, and the options responded to
+  neither hover nor click while the trigger button beside them worked. Two rewrites failed:
+  selecting on `mousedown` to beat the blur that unmounts the menu, and tracking hover in state
+  because inline styles carry no `:hover`. Neither changed the behaviour, which rules out the
+  blur race and points at the bridge not delivering pointer events to the floating subtree.
+  Root cause unconfirmed.
+
+  **Consequence: do not build floating menus in a front component at all.** Not with a library,
+  not by hand. Use an in-flow control (a chip row, a segmented control, an inline panel), or a
+  native Twenty view. The prototype's filter is now a chip row, which is fewer clicks anyway.
 - `ResizeObserver` and `IntersectionObserver` throw `ReferenceError`. Rules out recharts
   `ResponsiveContainer`, Floating UI `autoUpdate`, and most virtualized-list libraries — and the
   Inbox conversation list wants virtualization.
@@ -472,23 +484,31 @@ boundaries* — an agent must not read another team's conversations — they nee
 predicates, which are Enterprise. Decide whether inbox scoping is a view convenience or an access
 control guarantee, and price accordingly.
 
-### 6.8 Design language: better than expected, but only for the simple half
+### 6.8 Design language: tokens yes, components no
 
-`twenty-ui` **is** usable inside front components. It is MIT, bundled at build time, and the
-scaffolder wires it in by default. It gives us `Button`, `Tag`, `Status`, `Chip`, `Avatar`,
-`Callout`, `Banner`, the `H*Title`/`Label` typography set, and the full tree-shakeable `Icon*` set —
-all of which resolve their colours against the workspace's active light/dark theme automatically.
-`useTheme()` from `twenty-ui/theme-constants` returns Twenty's real design tokens (spacing, colours,
-radii, fonts) for our own inline styles, with no provider setup.
+**Corrected after seeing it run.** The distinction is not which components exist, it is how they are
+styled.
 
-That substantially reduces the "doesn't feel native" risk against brief §2. Use `useTheme()` tokens
-everywhere instead of hard-coded hex values, and never hand-roll a component `twenty-ui` already
-ships.
+**What works in a front component:**
 
-What it does **not** solve is the overlay half. `twenty-ui` depends on `@base-ui/react`, which
-portals its popovers, and portals render nothing in the sandbox (§6.2). So dropdowns, selects,
-comboboxes, dialogs and tooltips still need bespoke, portal-free implementations. Build those once
-in a shared internal module, styled from `useTheme()`, and reuse them across every front component.
+- **`useTheme()`** from `twenty-ui/theme-constants`. It returns plain values — spacing, colours,
+  radii, fonts, the `tag.background`/`tag.text` palettes — and inline styles built from them render
+  correctly in both themes. This is the part that makes our screens look native.
+- **`Icon*`** components. They are SVGs taking `size` and `color` props, with no CSS of their own.
+
+**What does not:** `Button`, `Tag`, `Status`, `Chip`, `Avatar` and the `H*Title`/`Label` typography
+set. MEASURED: they render their content and arrive **unstyled** — a `Button` shows its icon and
+label as stacked raw block content with no chrome, `Status` and `Tag` show bare text at inherited
+size. Their styling is Linaria classes, and those classes do not reach the sandboxed subtree.
+
+So the rule is: **take the tokens from `twenty-ui`, not the components.** Build small inline-styled
+primitives once per app in `src/ui/` (`Button`, `Badge`, `Initial`, `FilterChips` so far) and reuse
+them. This costs less than it sounds — each is 40 lines — and it removes the `@base-ui/react`
+portal problem at the same time.
+
+Twenty's own native views are unaffected: they run outside the sandbox with the real design system.
+Which is another reason to keep list and table surfaces native and reserve front components for what
+Twenty cannot express.
 
 Import from subpaths (`twenty-ui/input`, not `twenty-ui`), and avoid `IconsProvider` / `useIcons` /
 `iconsState`, which pull in several MB of Tabler icons.
@@ -599,7 +619,7 @@ running instance established:
 | App objects, fields on standard `Person` / `WorkspaceMember` | 228 metadata entities created in one sync |
 | `STANDALONE_PAGE` + `FRONT_COMPONENT` widget + `PAGE_LAYOUT` nav item | Full-page custom Inbox renders in the sidebar |
 | `definePageLayoutTab` on `personRecordPage` | Conversations tab appears on the Person record and loads |
-| `twenty-ui` inside a front component | `Button`, `Tag`, `Status`, `Avatar`, icons and `useTheme()` all render correctly in dark mode |
+| `twenty-ui` inside a front component | Imports resolve and render; `useTheme()` tokens and `Icon*` work, but styled components (`Button`, `Tag`, `Status`, `Avatar`) arrive **unstyled** — see §6.8 |
 | Reads and writes via `RestApiClient` | Reply box creates a record and it appears in the thread |
 | Logic function with `httpRouteTriggerSettings` | Seed function creates records across three objects |
 | Portal-free overlay | The dropdown **menu renders**, so hand-built overlays are viable |

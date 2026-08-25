@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { defineFrontComponent } from 'twenty-sdk/define';
 import { AppPath, navigate } from 'twenty-sdk/front-component';
-import { Avatar, Status, Tag } from 'twenty-ui/data-display';
 import { IconRefresh, IconSend, IconUser } from 'twenty-ui/icon';
-import { Button } from 'twenty-ui/input';
 import { useTheme } from 'twenty-ui/theme-constants';
 
 import {
@@ -21,12 +19,15 @@ import {
   CHANNELS,
 } from 'src/constants/channels';
 import { INBOX_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER } from 'src/constants/universal-identifiers';
-import { Dropdown, type DropdownOption } from 'src/ui/Dropdown';
+import { Badge } from 'src/ui/Badge';
+import { Button } from 'src/ui/Button';
+import { FilterChips, type FilterChipOption } from 'src/ui/FilterChips';
+import { Initial } from 'src/ui/Initial';
 
 const POLL_INTERVAL_MS = 5000;
 
-const CHANNEL_FILTER_OPTIONS: ReadonlyArray<DropdownOption<Channel | 'ALL'>> = [
-  { value: 'ALL', label: 'All channels' },
+const CHANNEL_FILTER_OPTIONS: ReadonlyArray<FilterChipOption<Channel | 'ALL'>> = [
+  { value: 'ALL', label: 'All' },
   ...CHANNELS.map((channel) => ({
     value: channel,
     label: CHANNEL_LABELS[channel],
@@ -197,7 +198,7 @@ const Inbox = () => {
           padding: theme.spacing[2],
         }}
       >
-        <Dropdown
+        <FilterChips
           testId="inbox-channel-filter"
           value={channelFilter}
           options={CHANNEL_FILTER_OPTIONS}
@@ -220,8 +221,6 @@ const Inbox = () => {
         </span>
         <Button
           Icon={IconRefresh}
-          size="small"
-          variant="secondary"
           title="Refresh"
           onClick={() => void loadConversations()}
         />
@@ -273,7 +272,7 @@ const Inbox = () => {
               </p>
               <Button
                 title={isSeeding ? 'Creating…' : 'Create demo data'}
-                disabled={isSeeding}
+                isDisabled={isSeeding}
                 onClick={() => void handleSeed()}
               />
             </div>
@@ -302,7 +301,7 @@ const Inbox = () => {
                   width: '100%',
                 }}
               >
-                <Avatar placeholder={name} placeholderColorSeed={conversation.id} />
+                <Initial name={name} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
@@ -344,9 +343,9 @@ const Inbox = () => {
                   </div>
                   <div style={{ marginTop: theme.spacing[1] }}>
                     {conversation.channel !== null && (
-                      <Tag
+                      <Badge
                         text={CHANNEL_LABELS[conversation.channel]}
-                        color={CHANNEL_COLORS[conversation.channel] as never}
+                        color={CHANNEL_COLORS[conversation.channel]}
                       />
                     )}
                   </div>
@@ -437,7 +436,8 @@ const Inbox = () => {
               <Button
                 Icon={IconSend}
                 title="Send"
-                accent="blue"
+                variant="primary"
+                isDisabled={draft.trim() === ''}
                 onClick={() => void handleSend()}
               />
             </div>
@@ -474,7 +474,7 @@ const Inbox = () => {
                 {contactName(selectedConversation)}
               </div>
               {selectedConversation.status !== null && (
-                <Status
+                <Badge
                   text={selectedConversation.status}
                   color={
                     selectedConversation.status === 'OPEN' ? 'green' : 'gray'
@@ -491,7 +491,6 @@ const Inbox = () => {
                   <Button
                     Icon={IconUser}
                     title="Open contact"
-                    variant="secondary"
                     onClick={() =>
                       void navigate(AppPath.RecordShowPage, {
                         objectNameSingular: 'person',

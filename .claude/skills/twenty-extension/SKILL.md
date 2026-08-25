@@ -72,7 +72,8 @@ All of this, declared as TypeScript and synced with the CLI. Verified against
 Components run in a Web Worker behind Remote DOM. Verified failures, most of them silent:
 
 - `createPortal` renders nothing while reporting success. Radix, base-ui, Headless UI and MUI
-  overlays do not work. Build overlays inline with `position: absolute`.
+  overlays do not work, and **neither does a hand-built one**: a `position: absolute` menu renders
+  but receives no pointer events. Use an in-flow control instead of anything that floats.
 - `ResizeObserver` and `IntersectionObserver` throw. No virtualization, no responsive chart containers.
 - `ref.current.focus()`, `.click()`, `.scrollIntoView()` throw. `document.activeElement` is undefined.
 - `<canvas>` renders nothing. Use SVG.
@@ -81,8 +82,10 @@ Components run in a Web Worker behind Remote DOM. Verified failures, most of the
 - No realtime transport. Poll, or use a native Twenty view which updates over SSE.
 - Cross-origin `fetch` sends `Origin: null`. Call third parties from a logic function.
 
-`twenty-ui` **does** work: `Button`, `Tag`, `Status`, `Chip`, `Avatar`, icons, typography, and
-`useTheme()` for real design tokens in both themes.
+From `twenty-ui`, **the tokens work and the components do not**: `useTheme()` returns real values and
+`Icon*` renders, but `Button`, `Tag`, `Status`, `Avatar` and the typography set arrive unstyled,
+since their Linaria classes never reach the sandbox. Build inline-styled primitives in the app's
+`src/ui/` instead.
 
 ## When core really must change
 
