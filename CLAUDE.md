@@ -1,44 +1,85 @@
-# Project
+# CLAUDE.md
 
-We are building a multi-tenant CRM + omnichannel + sales SaaS using Twenty as the CRM foundation.
+Permanent instructions for coding agents on this repository.
 
-Read `/docs/PRODUCT.md` before making architectural decisions, and `/docs/TWENTY_ARCHITECTURE.md` before deciding *where* code goes.
+## What this is
 
-## Important rules
+A commercial multi-tenant SaaS built on Twenty CRM. Two products share the platform:
 
-- Do not rebuild functionality already provided by Twenty.
-- Do not heavily modify Twenty core unless necessary.
-- Prefer extensions, custom objects and isolated modules.
-- Preserve compatibility with upstream Twenty where practical.
-- Generic SaaS functionality must never depend on Thailiving Law.
-- Thailiving-specific functionality must remain modular.
-- Omnichannel is a separate domain/service integrated into the CRM.
-- Check licenses before copying code from reference repositories.
-- Do not introduce a new framework/library without justification.
+- **Takdai** — the SaaS sold to small businesses: CRM, omnichannel inbox, sales, Thai payments.
+- **TLL CRM** — internal to Thailiving Law, Unique X and Pattaya Notary. Not sold.
 
-## Licensing constraint (read this before writing code outside an app)
+Thailiving is customer #1 and the first real testing environment. **The commercial product must
+never assume its customer is a law firm.**
 
-Twenty is AGPL-3.0 with a "Twenty Application Exception" (see `/LICENSE`). Code that talks to
-Twenty only through the **Application Interfaces** (REST/GraphQL APIs, webhooks, the app manifest,
-logic functions, front components, the published SDKs) may be licensed on our own terms.
-Modifying Twenty's own source puts our modified version under AGPLv3 in full, including section 13
-(network users get the source). Files marked `/* @license Enterprise */` are not AGPL at all and
-require a Twenty commercial subscription to run in production.
+## Read before changing architecture
 
-Practical consequence: **build product code as a Twenty app under `packages/twenty-apps/` or a
-separate repo, not as edits to `packages/twenty-server` / `packages/twenty-front`.** If a change
-genuinely requires touching core, say so explicitly and explain why no extension point works.
-
-## Where things go
-
-| Concern | Home |
+| Document | When |
 | --- | --- |
-| Contacts, companies, deals, tasks, notes, activities | Twenty standard objects, unmodified |
-| Conversations, messages, channel accounts, contact identities | our app's custom objects |
-| Inbox UI, quotation/invoice UI | front components in our app |
-| LINE/Meta webhook receipt, provider API calls, PDF rendering | logic functions in our app |
-| Provider credentials | app `serverVariables` / connection providers, never hard-coded |
-| Thailiving-only modules (matters, legal workflows) | a separate app, installed only in that workspace |
+| `docs/PRODUCT.md` | The master brief. Product vision and lifecycle |
+| `docs/ARCHITECTURE.md` | Domain boundaries and ownership. Before any structural decision |
+| `docs/TWENTY_ARCHITECTURE.md` | What Twenty actually provides, VERIFIED vs PROPOSED |
+| `docs/REFERENCES.md` | Before implementing any major feature |
+| `docs/OMNICHANNEL.md` | Conversations, messages, channels |
+| `docs/FINANCE.md` | Products, quotations, invoices |
+| `docs/PAYMENTS.md` | PromptPay, Thai bank transfer |
+| `DESIGN.md` | Any UI work |
+
+Skills in `.claude/skills/` carry the same rules in short form: `twenty-extension`, `omnichannel`,
+`thai-payments`, `finance`, `saas-ui`.
+
+## Rules
+
+**1. Do not modify Twenty's source.** Product code lives in an app under `apps/`, never in
+`packages/twenty-server` or `packages/twenty-front`. This is a licensing constraint, not a
+preference: Twenty is AGPL-3.0 with an Application Exception, and modifying it triggers §13, which
+obliges us to publish source to every network user of the hosted product. Before proposing a change
+under `packages/`, say which extension point you checked and why it does not work.
+
+**2. Inspect Twenty before building a replacement.** It already provides contacts, companies,
+opportunities, pipelines, tasks, notes, timelines, custom objects and fields, views, permissions,
+workspaces, REST/GraphQL/MCP APIs, webhooks, a workflow engine, file storage, search, AI agents and
+Stripe billing. Check the source; do not assume.
+
+**3. Preserve upstream compatibility.** Track `upstream/main` continuously. Prefer contributing a
+change upstream over carrying a patch. Record any unavoidable divergence in
+`docs/TWENTY_ARCHITECTURE.md` under upgrade risks.
+
+**4. Keep generic and Thailiving-specific code apart.** Nothing in a Takdai app may reference a legal
+concept, a Thailiving entity, or a specific bank account. Law-firm functionality goes in `tll-crm`,
+installed only in that workspace.
+
+**5. Consult `docs/REFERENCES.md` before implementing anything substantial.** Reference projects are
+not dependencies. For each one decide: DIRECT, SERVICE, LIBRARY, REFERENCE, or IGNORE.
+
+**6. Check the licence before reusing code.** MIT, Apache-2.0, BSD and Unlicense are safe.
+**AGPL-3.0 code must never be copied into our product** — it makes the product AGPL and forces
+source disclosure. Read AGPL projects for patterns and write our own. Ideas are not copyrightable;
+source is.
+
+**7. Avoid unnecessary dependencies.** Twenty already ships a design system (`twenty-ui`), an icon
+set, a queue, file storage and a workflow engine. A new framework or library needs a written
+justification.
+
+**8. Maintain domain ownership.** CRM owns people, companies, deals, pipelines, tasks, activities.
+Omnichannel owns channel accounts, contact identities, conversations, messages, inbox state,
+assignment. Sales owns products, quotations, invoices, payment requests. Payments owns PromptPay,
+bank transfer, payment status and verification. External accounting owns the ledger, statutory
+accounting and tax. **We are not building an ERP.**
+
+**9. One source of truth.** A conversation points at a `Person`; it never copies contact fields. An
+invoice holds an external reference to the accounting provider; it never mirrors their ledger. If
+two places can disagree, the design is wrong.
+
+**10. Do not over-abstract.** Build interfaces where multiple implementations are genuinely expected
+— channels, payment methods, accounting providers. Not for CRUD.
+
+## Working style
+
+- Verify claims against the source and say which file you read. Distinguish what you verified from
+  what you are proposing.
+- Prefer the smallest change that answers the question. Prototypes exist to produce evidence.
+- Record findings in the relevant document, not just in chat.
 
 ---
 

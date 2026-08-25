@@ -1,9 +1,19 @@
 # Twenty Architecture Audit
 
-Assessment of the Twenty codebase against `/docs/PRODUCT.md`. No code was changed to produce this
-document.
+Assessment of the Twenty codebase against `/docs/PRODUCT.md`.
 
 Audited revision: `1d83c2e5` (upstream `main`), Twenty version 2.35.x, Nx/Yarn 4 monorepo.
+
+## How to read this
+
+| Label | Meaning |
+| --- | --- |
+| **VERIFIED** | Read in the source at the cited path, or observed running in the prototype |
+| **MEASURED** | Observed in `apps/takdai-inbox` against a live local Twenty |
+| **PROPOSED** | Our design. Not built, not validated |
+
+Sections 2 to 4 and 6.1 to 6.3 are VERIFIED. Section 5 is PROPOSED. Section 6.4 onward mixes both
+and says which is which. Section 9 lists what a running prototype established.
 
 ---
 
@@ -26,7 +36,7 @@ consequential finding.
 
 ---
 
-## 2. Licensing (read first — it changes the architecture)
+## 2. Licensing — VERIFIED (read first, it changes the architecture)
 
 `/LICENSE` is not plain AGPLv3. It has three tiers:
 
@@ -89,7 +99,7 @@ Enterprise subscription costs for a multi-tenant reseller-style deployment.
 
 ---
 
-## 3. Requirement → existing Twenty functionality
+## 3. Requirement → existing Twenty functionality — VERIFIED
 
 Mapping `/docs/PRODUCT.md` §3 and §4 against what exists today.
 
@@ -132,7 +142,7 @@ Read it as a design reference for participant matching, nothing more.
 
 ---
 
-## 4. The extension mechanism (this is the important part)
+## 4. The extension mechanism — VERIFIED (this is the important part)
 
 Twenty Apps are declared as TypeScript, built by the SDK CLI, and synced into a workspace. The full
 set of things an app can contribute is `Manifest` in
@@ -219,7 +229,7 @@ Terraform-style diff; `yarn twenty app:publish --private` deploys a tarball to o
 
 ---
 
-## 5. Proposed minimum architecture
+## 5. Minimum architecture — PROPOSED
 
 ### 5.1 Shape
 
@@ -312,7 +322,7 @@ Every arrow above uses a mechanism that exists today. Nothing in it requires a c
 
 ---
 
-## 6. Conflicts between the brief and Twenty's architecture
+## 6. Conflicts between the brief and Twenty's architecture — VERIFIED unless noted
 
 Ordered by how much they should change the plan.
 
@@ -478,7 +488,7 @@ alpha, so treat its API as unstable across Twenty upgrades.
 
 ---
 
-## 7. Changes that would make upstream upgrades painful
+## 7. Changes that would make upstream upgrades painful — PROPOSED guidance
 
 Ranked worst to least.
 
@@ -552,6 +562,58 @@ document extraction, HR, TLLACC integration.
 
 ---
 
+## 9b. Prototype results — MEASURED
+
+`apps/takdai-inbox` was built and run against a local Twenty 2.35 to test the claims above. What a
+running instance established:
+
+### Confirmed working
+
+| Claim | Result |
+| --- | --- |
+| App objects, fields on standard `Person` / `WorkspaceMember` | 228 metadata entities created in one sync |
+| `STANDALONE_PAGE` + `FRONT_COMPONENT` widget + `PAGE_LAYOUT` nav item | Full-page custom Inbox renders in the sidebar |
+| `definePageLayoutTab` on `personRecordPage` | Conversations tab appears on the Person record and loads |
+| `twenty-ui` inside a front component | `Button`, `Tag`, `Status`, `Avatar`, icons and `useTheme()` all render correctly in dark mode |
+| Reads and writes via `RestApiClient` | Reply box creates a record and it appears in the thread |
+| Logic function with `httpRouteTriggerSettings` | Seed function creates records across three objects |
+| Portal-free overlay | The dropdown **menu renders**, so hand-built overlays are viable |
+
+### Measured
+
+- **REST fetch latency: 25ms** for 3 conversations with `depth=1`. Not yet measured at 500.
+- Poll interval 5s. Native Twenty views update over SSE and are visibly fresher.
+
+### Open defect (ours, not the platform's)
+
+The channel filter dropdown opens but its options are inert: no hover feedback, clicks do nothing.
+
+Diagnosis: `src/ui/Dropdown.tsx` closes on `onBlur`, which fires on mousedown, unmounting the menu
+before the option's `onClick` lands. The same code would misbehave in a plain browser. Hover
+feedback was simply never written.
+
+**This is not evidence that overlays are impossible in the sandbox.** The menu rendered, which was
+the real question. Fix by selecting on mousedown instead of click.
+
+### Windows toolchain findings
+
+Three real obstacles, all now documented in `apps/takdai-inbox/README.md`:
+
+1. Twenty's longest tracked path is **241 characters**; a full checkout exceeds Windows' 260 limit
+   and aborts. Sparse-checkout of the app alone (92 characters) avoids it.
+2. **The SDK emits backslash paths on Windows** (`path.relative`), and the server rejects any
+   resource path containing one. Every sync from Windows fails until patched. Upstream bug; worth
+   reporting.
+3. The server builds the logic-function dependency layer by running `yarn install` against the app's
+   `package.json` **inside its container**, where only `package.json` and `yarn.lock` exist. A
+   `postinstall` referencing a local script makes every logic function fail at runtime with
+   `ROUTE_TRIGGER_PLATFORM_ERROR`. **Nothing in an app's `package.json` may reference a file the
+   server does not copy.**
+
+Finding 3 is an architectural constraint, not a footnote.
+
+---
+
 ## 10. Key files
 
 | Topic | Path |
@@ -569,3 +631,5 @@ document extraction, HR, TLLACC integration.
 | Reference app exercising every manifest entity | `packages/twenty-apps/fixtures/rich-app/` |
 | Locale list (no `th-TH`) | `packages/twenty-shared/src/translations/constants/AppLocales.ts` |
 | Front component renderer | `packages/twenty-front-component-renderer/` |
+| Timeline activity types (client history) | `packages/twenty-shared/src/application/timelineActivityTypeManifestType.ts` |
+| Our prototype and its spike checklist | `apps/takdai-inbox/`, `apps/takdai-inbox/SPIKE.md` |

@@ -1,5 +1,19 @@
 # Master Product & Development Brief — CRM + Omnichannel Business Platform
 
+> **Reading guide.** This is the master product brief, the canonical statement of what we are
+> building. It is kept as written rather than summarized elsewhere, so there is one source of truth.
+>
+> - **Customer lifecycle** — §26 (MVP) and §9 (sales workflow):
+>   `Enquiry → Conversation → CRM Contact → Lead/Deal → Quotation → Invoice → Payment → Completed`
+> - **Commercial positioning and Thailand-first strategy** — §2 and §29
+> - **Development order** — §27
+> - **Rules for coding agents** — §28, restated operationally in `/CLAUDE.md`
+>
+> How this is being built is in [`ARCHITECTURE.md`](./ARCHITECTURE.md); what the Twenty foundation
+> actually provides is in [`TWENTY_ARCHITECTURE.md`](./TWENTY_ARCHITECTURE.md).
+
+---
+
 ## 1. Project Vision
 
 Build a modern, multi-tenant CRM and customer operations SaaS for businesses, initially developed and tested using Thailiving Law as the first real organization.
