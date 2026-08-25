@@ -595,6 +595,36 @@ feedback was simply never written.
 **This is not evidence that overlays are impossible in the sandbox.** The menu rendered, which was
 the real question. Fix by selecting on mousedown instead of click.
 
+### Thai content handling — VERIFIED
+
+Distinct from UI localization, and the part that actually matters: customers write to us in Thai.
+
+| Concern | Status |
+| --- | --- |
+| Storage and display of Thai text | Works. Postgres and the browser need nothing from us |
+| Font | **Gap.** Twenty's stack is `Inter, sans-serif`; Inter has no Thai glyphs. Our components need `Inter, "Noto Sans Thai", sans-serif` and extra line height where Thai appears |
+| Search | **Broken for Thai.** See below |
+
+**Search does not work on Thai.** Twenty builds its index with `to_tsvector('simple', ...)`
+(`engine/metadata-modules/flat-search-field-metadata/utils/compute-search-vector-as-expression-from-search-field-metadatas.util.ts`)
+and queries it with `to_tsquery('simple', ...)`
+(`engine/core-modules/search/services/search.service.ts`).
+
+The `simple` configuration tokenizes on whitespace. Thai does not put spaces between words, so a
+Thai sentence indexes as a single token and no word inside it is findable.
+
+Consequences:
+
+- **In our own app screens:** avoidable. Use REST `contains` / `ilike` filters for search boxes
+  instead of the search vector. Substring matching has no word-boundary concept, so it works on Thai.
+- **In Twenty's native search** (People, Companies, command menu): not avoidable from an app. Fixing
+  it means installing a Thai-capable tokenizer extension on the Postgres server (`pg_bigm` or an
+  ICU-based tokenizer) and changing the text search configuration. That is server configuration, not
+  a code change, but it is a deployment divergence to record.
+
+Decide which is needed: Thai **message text** search (solvable in our app) or Thai **contact name**
+search in the CRM (needs the Postgres extension).
+
 ### Windows toolchain findings
 
 Three real obstacles, all now documented in `apps/takdai-inbox/README.md`:

@@ -19,7 +19,8 @@ identity:
   not: [playful, marketing, spacious, decorative]
 
 typography:
-  family: "Inter, sans-serif"
+  family: 'Inter, "Noto Sans Thai", sans-serif'   # Inter has no Thai glyphs
+  line_height_thai: 1.6                            # Thai needs more vertical room than Latin
   size:
     xxs: 0.625rem   # 10px  metadata, timestamps
     xs:  0.85rem    # 13.6px secondary text, table cells
@@ -185,9 +186,10 @@ When a primitive proves itself in two apps, promote it to a shared internal pack
 
 ## Open questions
 
-1. **Thai typography.** Inter has no Thai coverage. Thai text needs a companion face (Noto Sans Thai
-   or IBM Plex Sans Thai) with matched metrics. Line height for Thai needs more room than Latin.
-   Unresolved, and blocking for a Thailand-first product.
+1. **Thai typography — resolved in the tokens, unverified in practice.** Inter has no Thai coverage,
+   so the stack carries a Thai companion face. Verify the metrics actually pair well at 13-15px, and
+   that mixed Thai/Latin lines in a message thread do not jitter. The UI itself stays English; Thai
+   appears as customer content, which is exactly where it must look right.
 2. **Do we need a brand accent** distinct from Twenty's blue, and does introducing one create the
    seam we are trying to avoid?
 3. **Density on mobile.** The payment page is mobile-first and its rules are the opposite of the
