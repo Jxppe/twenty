@@ -119,3 +119,21 @@ path, not the dev loop.
 - Front-component CSS is injected into the host page unscoped. Prefix class names; never write bare
   element selectors.
 - Pin `twenty-ui` to the version the target Twenty instance ships. It is alpha.
+
+## Patched dependency: twenty-sdk
+
+`.yarn/patches/twenty-sdk-npm-2.35.0-*.patch` fixes a Windows-only bug in the SDK. The manifest
+builder derives `sourceHandlerPath` / `sourceComponentPath` with `path.relative`, which returns
+`src\logic-functions\seed-demo-data.ts` on Windows, and the server rejects any resource path
+containing backslashes:
+
+```
+INVALID_LOGIC_FUNCTION_INPUT: Resource path must not contain backslashes
+INVALID_FRONT_COMPONENT_INPUT: Resource path must not contain backslashes
+```
+
+The patch normalizes those five `path.relative` call sites to forward slashes. It is a no-op on
+macOS and Linux, since Node already returns `/` there, and Windows accepts `/` in filesystem calls.
+
+`yarn install` applies it automatically. On an SDK upgrade the patch will need regenerating
+(`yarn patch twenty-sdk`), or dropping if upstream has fixed it. Worth reporting upstream.
