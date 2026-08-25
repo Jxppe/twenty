@@ -136,12 +136,17 @@ The script normalizes those call sites in the installed bundle to forward slashe
 and a no-op on macOS and Linux where `path.relative` already returns `/`. Windows accepts forward
 slashes in filesystem calls, so normalizing is safe everywhere.
 
-It runs automatically as a `postinstall`. It is a plain node script rather than a `yarn patch` on
-purpose: it works with any package manager, and it can be run by hand when the toolchain is broken.
+Run it once after every install, on Windows:
 
 ```sh
 node scripts/fix-twenty-sdk-windows-paths.mjs
 ```
+
+It is deliberately **not** a `postinstall`. The server builds the dependency layer for logic
+functions by running `yarn install` against this `package.json` inside its own container, where
+`scripts/` does not exist — a `postinstall` referencing it makes that install exit 1, and every
+logic function then fails at runtime with `ROUTE_TRIGGER_PLATFORM_ERROR`. Nothing in this
+`package.json` may reference a file the server does not copy.
 
 On an SDK upgrade the script will warn that it could not find the call sites, and will need updating
 or dropping if upstream has fixed it. Worth reporting upstream.
