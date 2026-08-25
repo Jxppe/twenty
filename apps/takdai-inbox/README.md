@@ -62,6 +62,28 @@ reused, styled from `useTheme()` so it matches the workspace theme.
 The app is a standalone Yarn project, not part of Twenty's workspace. It needs a running Twenty
 instance to sync against, but not a built monorepo: the CLI runs one in Docker for you.
 
+### Windows: check out only this app
+
+Twenty's longest tracked path is 241 characters, so a full checkout blows past Windows' 260-character
+limit and aborts halfway. Nothing here needs `twenty-server` on disk, so clone sparsely into a short
+base path instead:
+
+```sh
+git config --global core.longpaths true
+
+cd C:\ && mkdir dev && cd dev
+git clone --no-checkout --filter=blob:none https://github.com/Jxppe/twenty.git
+cd twenty
+git sparse-checkout init --cone
+git sparse-checkout set apps/takdai-inbox docs
+git checkout claude/twenty-crm-audit-h5qrnv
+```
+
+The app's own longest path is 92 characters, so it fits comfortably. To take the full tree later,
+`git sparse-checkout disable` and enable `LongPathsEnabled` in the Windows registry first.
+
+### Running
+
 ```sh
 yarn install
 yarn twenty docker:start   # prebuilt Twenty on http://localhost:2020, CLI auto-authenticated
