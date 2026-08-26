@@ -1,14 +1,44 @@
 # TLL CRM
 
-Omnichannel inbox for Twenty: LINE, Meta, email and web chat conversations in one place, linked to
-Twenty contacts.
+The practice management app for Thailiving Law, Unique X Services and Pattaya Notary: matters,
+deadlines, required documents and the firm's billing entities. Also carries the omnichannel inbox
+prototype, which predates D4 and is kept as evidence rather than as product.
 
 This is a **Twenty app**. It adds objects, screens and server functions to a Twenty workspace through
 the published application interfaces, and changes nothing in Twenty's own source. That boundary is
-deliberate: see the licensing section of [`/docs/TWENTY_ARCHITECTURE.md`](../../docs/TWENTY_ARCHITECTURE.md).
+deliberate: see [`/docs/DECISIONS.md`](../../docs/DECISIONS.md) D1.
 
-Current state: **milestone 2 spike**. Real objects, real reads and writes, no live channel yet.
-[`SPIKE.md`](./SPIKE.md) is the checklist for what running it is meant to answer.
+Read [`/docs/MATTERS.md`](../../docs/MATTERS.md) before changing the domain.
+
+## Daily loop
+
+```
+twenty remote:use nas     once, picks which instance you are working against
+dev                       leave it running: save a file, it syncs
+```
+
+`dev` is a **watcher**, not a one-shot. Start it and leave it. Editing a file
+and saving re-syncs the app on its own; there is nothing to re-run.
+
+`dev.cmd` and `twenty.cmd` call the CLI's node bundle directly, so they work
+whether or not yarn is healthy on the machine. `./twenty.sh` is the same thing
+for a shell.
+
+### Authenticate with an API key, not OAuth
+
+OAuth tokens expire and force a browser round-trip mid-session. An API key does
+not. Create one in the workspace under Settings, APIs, then:
+
+```
+twenty remote:add --url http://<host>:2020 --as nas --api-key <key>
+```
+
+### What is still not instant
+
+Objects and fields are database migrations, so a change to them is a real
+metadata sync, not a hot reload. Front component and logic function code is
+faster: the watcher rebuilds and pushes just that.
+
 
 ## What it adds to a workspace
 
