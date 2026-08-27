@@ -9,9 +9,14 @@ type Payload = { confirm?: boolean };
 // (`person-data-seeds.constant.ts`). UUID filters have no prefix operator, but
 // they do compare, and this range holds exactly that prefix. Anything we or the
 // firm creates is a random v4 and cannot collide.
-const SEED_RANGE = {
-  gte: '20202020-0000-0000-0000-000000000000',
-  lt: '20202021-0000-0000-0000-000000000000',
+//
+// Split across `and` because a field takes exactly one operator per object
+// (`validate-and-transform-operator-and-value.util.ts:30`).
+const SEED_RANGE_FILTER = {
+  and: [
+    { id: { gte: '20202020-0000-0000-0000-000000000000' } },
+    { id: { lt: '20202021-0000-0000-0000-000000000000' } },
+  ],
 };
 
 const TARGETS = [
@@ -28,7 +33,7 @@ const idsInSeedRange = async (
 ): Promise<string[]> => {
   const result = (await client.query({
     [plural]: {
-      __args: { filter: { id: SEED_RANGE }, first: PAGE_SIZE },
+      __args: { filter: SEED_RANGE_FILTER, first: PAGE_SIZE },
       edges: { node: { id: true } },
     },
   })) as Record<string, { edges?: { node?: { id?: string } }[] }>;

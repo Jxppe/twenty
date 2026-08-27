@@ -107,6 +107,11 @@ All of this, declared as TypeScript and synced with the CLI. Verified against
   of art, and watch especially for common words carrying an uncommon meaning: "Practice" reads as
   rehearsing, "Outstanding" reads as excellent. Those are worse than obvious jargon, because nobody
   thinks to ask.
+- **A record filter takes exactly one operator per field object**
+  (`validate-and-transform-operator-and-value.util.ts:30`). `{ startsAt: { gte, lt } }` throws
+  `Filter for field "startsAt" must have exactly one operator` at query time, not at build time, so a
+  date range has to be two clauses under `and`. Anything combining conditions on one field is the
+  same shape: `{ and: [{ f: { gte } }, { f: { lt } }] }`.
 - **`type` is a reserved field name** (`RESERVED_METADATA_NAME_KEYWORDS` in `twenty-shared`), along
   with a long list of others. The server renames a reserved field to `<name>Custom` rather than
   refusing outright, so check the list before naming a field.

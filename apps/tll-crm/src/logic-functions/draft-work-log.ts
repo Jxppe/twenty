@@ -24,11 +24,22 @@ export type WorkLogDraft = {
 
 const MINUTE = 60_000;
 
-const dayBounds = (workedOn: string): { from: string; to: string } => {
+// A field takes exactly one operator per object
+// (`validate-and-transform-operator-and-value.util.ts:30`), so a range is two
+// clauses under `and`, not two keys on one field.
+const dayFilter = (
+  field: string,
+  workedOn: string,
+): { and: Record<string, Record<string, string>>[] } => {
   const from = new Date(`${workedOn}T00:00:00.000Z`);
   const to = new Date(from.getTime() + 24 * 60 * MINUTE);
 
-  return { from: from.toISOString(), to: to.toISOString() };
+  return {
+    and: [
+      { [field]: { gte: from.toISOString() } },
+      { [field]: { lt: to.toISOString() } },
+    ],
+  };
 };
 
 const minutesBetween = (
@@ -84,16 +95,17 @@ const handler = async (
   }
 
   const client = new CoreApiClient();
-  const { from, to } = dayBounds(workedOn);
   const drafts: WorkLogDraft[] = [];
 
   const bookings = (await client.query({
     bookings: {
       __args: {
         filter: {
-          responsibleId: { eq: workspaceMemberId },
-          startsAt: { gte: from, lt: to },
-          status: { neq: 'CANCELLED' },
+          and: [
+            { responsibleId: { eq: workspaceMemberId } },
+            { status: { neq: 'CANCELLED' } },
+            ...dayFilter('startsAt', workedOn).and,
+          ],
         },
       },
       edges: {
@@ -127,8 +139,10 @@ const handler = async (
     matterDeadlines: {
       __args: {
         filter: {
-          responsibleId: { eq: workspaceMemberId },
-          completedAt: { gte: from, lt: to },
+          and: [
+            { responsibleId: { eq: workspaceMemberId } },
+            ...dayFilter('completedAt', workedOn).and,
+          ],
         },
       },
       edges: { node: { id: true, title: true, matterId: true } },
@@ -154,8 +168,10 @@ const handler = async (
     conversations: {
       __args: {
         filter: {
-          assigneeId: { eq: workspaceMemberId },
-          lastMessageAt: { gte: from, lt: to },
+          and: [
+            { assigneeId: { eq: workspaceMemberId } },
+            ...dayFilter('lastMessageAt', workedOn).and,
+          ],
         },
       },
       edges: { node: { id: true, title: true } },
