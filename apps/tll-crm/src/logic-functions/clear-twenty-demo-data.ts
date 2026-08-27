@@ -12,10 +12,15 @@ type Payload = { confirm?: boolean };
 //
 // Split across `and` because a field takes exactly one operator per object
 // (`validate-and-transform-operator-and-value.util.ts:30`).
+//
+// The bounds are themselves validated as UUIDs, and `isValidUuid` demands a
+// version nibble of 1-5 and a variant of 8-b, so an all-zero bound is rejected.
+// These are the lowest legal UUID carrying each prefix, which is exactly the
+// boundary wanted since Postgres compares uuids bytewise.
 const SEED_RANGE_FILTER = {
   and: [
-    { id: { gte: '20202020-0000-0000-0000-000000000000' } },
-    { id: { lt: '20202021-0000-0000-0000-000000000000' } },
+    { id: { gte: '20202020-0000-1000-8000-000000000000' } },
+    { id: { lt: '20202021-0000-1000-8000-000000000000' } },
   ],
 };
 

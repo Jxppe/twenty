@@ -112,6 +112,9 @@ All of this, declared as TypeScript and synced with the CLI. Verified against
   `Filter for field "startsAt" must have exactly one operator` at query time, not at build time, so a
   date range has to be two clauses under `and`. Anything combining conditions on one field is the
   same shape: `{ and: [{ f: { gte } }, { f: { lt } }] }`.
+  Filter bounds are validated as UUIDs too: `isValidUuid` demands a version nibble of 1-5 and a
+  variant of 8-b, so `20202020-0000-0000-0000-000000000000` is rejected even though it looks like
+  one. The lowest legal UUID for a prefix ends `-0000-1000-8000-000000000000`.
 - **`type` is a reserved field name** (`RESERVED_METADATA_NAME_KEYWORDS` in `twenty-shared`), along
   with a long list of others. The server renames a reserved field to `<name>Custom` rather than
   refusing outright, so check the list before naming a field.
