@@ -29,12 +29,14 @@ Leave it. It rebuilds and re-syncs every time a file is saved, including files t
 ### Terminal 2: everything else
 
 ```
-cd C:\Users\jespe\Documents\GitHub\twenty
-git pull
-cd apps\tll-crm
+cd C:\Users\jespe\Documents\GitHub\twenty\apps\tll-crm
+pull
 ```
 
-Stay in that folder. `git pull` here whenever changes land; terminal 1 picks them up on its own.
+`pull` watches the branch and pulls when something lands, so you never type `git pull`. Terminal 1
+picks up whatever arrives. Ctrl-C when you want the terminal back for a one-off command.
+
+Prefer doing it by hand? `git pull` from the repository root does the same thing.
 
 ### First run on a machine, or after the config is lost
 
@@ -70,7 +72,8 @@ Both containers restart with the NAS, so a failure here is usually the NAS itsel
 | `dev` | The watcher. Terminal 1, all day. |
 | `twenty plan` | See what a sync would change, without changing it |
 | `twenty apply` | Sync once and exit, instead of watching |
-| `twenty dev:function:exec --postInstall` | Run the install hook by hand. `dev` does not run it |
+| `pull` | Watch GitHub and pull automatically. Terminal 2 |
+| `twenty dev:function:exec --postInstall` | Only when the install hook itself changed: the relabel or the seed data. Not part of the normal loop |
 | `twenty dev:function:exec -n <name>` | Run one logic function and see its output |
 | `twenty dev:function:logs -n <name>` | Stream a function's logs |
 | `twenty remote:list` | Which instances are configured, and which is active |
