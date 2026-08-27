@@ -55,6 +55,15 @@ All of this, declared as TypeScript and synced with the CLI. Verified against
 
 ## Gotchas that cost hours
 
+- **Never look a standard object up by `universalIdentifier`.** Those constants are compiled into the
+  CLI, not read from the server, so a CLI running ahead of the server names different objects than
+  the server has. MEASURED: a 2.35 CLI against a 2.34 server relabelled **Dashboard** while reporting
+  that it had relabelled Opportunity, because the filter returned the wrong record rather than none.
+  Fetch the object list and match on **`nameSingular`**, which is the API contract and does not move.
+- **The client SDK's GraphQL schema is generated from the CLI's version too.** A field that exists in
+  one and not the other (`isCustom` in 2.35, `isSystem` in 2.34) typechecks at build and fails at
+  runtime. Query only what both versions have, or keep the versions in step.
+
 - **`dev` does not run install hooks.** It syncs metadata, nothing else, so a
   `definePostInstallLogicFunction` never fires during development however many times you sync.
   MEASURED: seeded records absent and standard-object relabels not applied, with no error anywhere.

@@ -1,9 +1,6 @@
 import { CoreApiClient } from 'twenty-client-sdk/core';
 import { MetadataApiClient } from 'twenty-client-sdk/metadata';
-import {
-  definePostInstallLogicFunction,
-  STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS,
-} from 'twenty-sdk/define';
+import { definePostInstallLogicFunction } from 'twenty-sdk/define';
 
 import { RELABEL_STANDARD_OBJECTS_FUNCTION_UNIVERSAL_IDENTIFIER } from 'src/constants/universal-identifiers';
 
@@ -11,24 +8,33 @@ import { RELABEL_STANDARD_OBJECTS_FUNCTION_UNIVERSAL_IDENTIFIER } from 'src/cons
 // `opportunity` would break /rest/opportunities and every integration. An app
 // manifest cannot express this, so it goes through the metadata API on install.
 //
-// Only the properties in FLAT_OBJECT_METADATA_EDITABLE_PROPERTIES.standard may
-// be sent for a standard object. isLabelSyncedWithName is not one of them, and
-// including it fails the whole update: it is a custom-object property, and
-// standard labels are stored as overrides instead.
+// Matched on nameSingular, never on universalIdentifier. Those constants are
+// compiled into the CLI, so on a version skew they name different objects than
+// the server has, and the filter silently returns the wrong record rather than
+// none: that is how Dashboard came to be called Organization.
+//
+// Only FLAT_OBJECT_METADATA_EDITABLE_PROPERTIES.standard may be sent for a
+// standard object. isLabelSyncedWithName is not in it and fails the whole
+// update; standard labels are stored as overrides instead.
 const RELABELS = [
   {
-    universalIdentifier:
-      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.opportunity.universalIdentifier,
+    nameSingular: 'opportunity',
     labelSingular: 'Job',
     labelPlural: 'Jobs',
     icon: 'IconBriefcase',
   },
   {
-    universalIdentifier:
-      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.company.universalIdentifier,
+    nameSingular: 'company',
     labelSingular: 'Organization',
     labelPlural: 'Organizations',
     icon: 'IconBuilding',
+  },
+  // Repairing an earlier mistake of ours, and harmless once it has run.
+  {
+    nameSingular: 'dashboard',
+    labelSingular: 'Dashboard',
+    labelPlural: 'Dashboards',
+    icon: 'IconLayoutDashboard',
   },
 ];
 
@@ -57,34 +63,50 @@ const relabelStandardObjects = async (): Promise<{
   const relabelled: string[] = [];
   const errors: string[] = [];
 
+  const found = (await client.query({
+    objects: {
+      __args: { paging: { first: 200 }, filter: {} },
+      edges: { node: { id: true, nameSingular: true, labelSingular: true } },
+    },
+  })) as {
+    objects?: {
+      edges?: {
+        node?: { id?: string; nameSingular?: string; labelSingular?: string };
+      }[];
+    };
+  };
+
+  const objectsByName = new Map<string, { id: string; label: string }>();
+
+  for (const edge of found.objects?.edges ?? []) {
+    if (edge.node?.nameSingular !== undefined && edge.node.id !== undefined) {
+      objectsByName.set(edge.node.nameSingular, {
+        id: edge.node.id,
+        label: edge.node.labelSingular ?? '',
+      });
+    }
+  }
+
   for (const relabel of RELABELS) {
+    const target = objectsByName.get(relabel.nameSingular);
+
+    if (target === undefined) {
+      errors.push(`${relabel.nameSingular}: not found on this server`);
+      continue;
+    }
+
+    if (target.label === relabel.labelSingular) {
+      continue;
+    }
+
     // A failure here must not fail the install, but it must be reported: a
     // silently swallowed one looks exactly like a relabel that did not apply.
     try {
-      const found = (await client.query({
-        objects: {
-          __args: {
-            paging: { first: 1 },
-            filter: {
-              universalIdentifier: { eq: relabel.universalIdentifier },
-            },
-          },
-          edges: { node: { id: true } },
-        },
-      })) as { objects?: { edges?: { node?: { id?: string } }[] } };
-
-      const id = found.objects?.edges?.[0]?.node?.id;
-
-      if (id === undefined) {
-        errors.push(`${relabel.labelPlural}: object not found`);
-        continue;
-      }
-
       await client.mutation({
         updateOneObject: {
           __args: {
             input: {
-              id,
+              id: target.id,
               update: {
                 labelSingular: relabel.labelSingular,
                 labelPlural: relabel.labelPlural,
@@ -96,10 +118,10 @@ const relabelStandardObjects = async (): Promise<{
         },
       });
 
-      relabelled.push(relabel.labelPlural);
+      relabelled.push(`${relabel.nameSingular} -> ${relabel.labelPlural}`);
     } catch (caught) {
       errors.push(
-        `${relabel.labelPlural}: ${caught instanceof Error ? caught.message : String(caught)}`,
+        `${relabel.nameSingular}: ${caught instanceof Error ? caught.message : String(caught)}`,
       );
     }
   }
