@@ -229,6 +229,11 @@ type ViewFieldGroupRow = { id?: string; name?: string };
 const applyFieldPlacements = async (): Promise<{
   moved: number;
   placementErrors: string[];
+  diagnostics: {
+    expectedViews: string[];
+    viewsReturned: number;
+    sampleViewUniversalIdentifiers: string[];
+  };
 }> => {
   const client = new MetadataApiClient();
   const placementErrors: string[] = [];
