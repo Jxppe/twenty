@@ -12,6 +12,25 @@ Read [`/docs/JOBS.md`](../../docs/JOBS.md) before changing the domain.
 
 ## Starting a session
 
+**One terminal:**
+
+```
+cd C:\Users\jespe\Documents\GitHub\twenty\apps\tll-crm
+sync
+```
+
+That is the whole loop. It watches the branch, and when a commit lands it pulls, applies the metadata
+to the CRM, and runs the install hook. Errors print and it retries on the next commit. Nothing to
+type between changes.
+
+`dev` and `pull` still exist and are what you want if you are editing files on this machine, since
+`dev` watches the filesystem. Changes arrive here by git, so `sync` is the loop that fits.
+
+One thing it does not do: apply destructive metadata changes without asking. If a sync would delete a
+field or an object it stops and says so, rather than silently dropping the data with it.
+
+## Starting a session (the old two-terminal way)
+
 Everything below runs **on the development PC**, in Command Prompt. Nothing runs on the NAS.
 
 **Two terminals.** One holds the watcher and stays open all day. The other is for everything else.
