@@ -21,10 +21,15 @@ among them, and was closed by a maintainer: *"We're not open to adding more loca
 to improve quality for existing locales first."* So contributing upstream is not the escape hatch,
 and the patch is ours to carry indefinitely.
 
-**And there is nothing in it to reuse.** Fetched and counted at `pull/17225/head`: the front
-catalogue has 2,375 strings, the server 828, emails 44, and **every `msgstr` is empty**. The PR added
-locale plumbing and blank catalogue files, no Thai. `lingui extract` produces the same blanks in a
-minute, so the only thing that PR would have saved us is a line in a constants file.
+**And there is nothing in it to reuse.** All four commits on the branch were fetched and checked, not
+just the head: only one of them (`ba13abdfe`) touches a `th-TH.po` at all, two are merges from main,
+and the last touches services rather than catalogues. At the branch head the front catalogue has
+2,375 strings, the server 828, emails 44, and **every single `msgstr` is empty**. The PR added
+plumbing and blank files, no Thai. `lingui extract` produces the same blanks in a minute.
+
+**What that fourth commit did teach us is the file count.** It is titled *"fix: add missing locales
+to i18n services — fixes runtime errors when these locales are used"*, and it patches two more
+hardcoded registries. So it is **five hand-edited files**, not three:
 
 Three files, not one, all verified in the source:
 
@@ -33,12 +38,19 @@ Three files, not one, all verified in the source:
 | `twenty-shared/.../AppLocales.ts` | The locale does not exist |
 | `twenty-front/.../useLocaleOptions.ts` | **Thai never appears in the picker.** The list is a hand-written array of 30 entries, not derived from `APP_LOCALES` |
 | `twenty-front/.../getDateFnsLocale.ts` | Thai dates format with English rules. The switch has an `en-US` default, so this degrades rather than crashes |
+| `twenty-server/.../i18n/i18n.service.ts` | Runtime errors on the server when the locale is selected. One hardcoded import and map entry per locale |
+| `twenty-emails/src/utils/i18n.utils.ts` | The same, for outbound email. Also a type error at build |
+
+Plus the six generated catalogue files, which `lingui extract` and `compile` produce.
 
 **Lingui still falls back to the English source string**, so a partial catalogue works and nothing
 breaks while it is incomplete. Full coverage would be 3,931 front strings, 2,158 server, 67 email.
 
-**This is the one accepted exception to D1.** `twenty-shared` is MIT so there is no licence
-consequence, but the merge-conflict surface is three files in two packages, and permanent.
+**This is the one accepted exception to D1.** `twenty-shared` is MIT, but `twenty-front`,
+`twenty-server` and `twenty-emails` are AGPL, so patching them puts our deployment under AGPL in
+full. Under D4 that costs nothing: the network users are our own staff, and offering them the source
+is free. The real price is the merge-conflict surface, five files across four packages, on every
+upgrade.
 
 **Gates our own Thai strings:** app translations are typed `Partial<Record<AppLocale, ...>>`, so the
 app cannot ship Thai until the platform knows the locale.
