@@ -6,6 +6,53 @@ Each entry says what was decided, why, what would reverse it, and what was verif
 
 ---
 
+## D11 — Historic clients arrive by spreadsheet import, not a migration
+
+**Decided.** The clients the firm already tracks come in through Twenty's own spreadsheet import.
+No importer is built.
+
+**Why.** The firm keeps records only for its larger clients, so the volume is small and one-off.
+Twenty ships the whole wizard already: upload, pick the sheet, pick the header row, match columns to
+fields, validate, import
+(`packages/twenty-front/src/modules/spreadsheet-import/steps/components/`). Writing anything to
+replace that would be rule 2 in `CLAUDE.md` violated for no gain.
+
+**What it costs.** Someone has to produce the spreadsheet, which is the real work and is not a
+software problem. Relations have to be imported in dependency order: organizations before people,
+people before jobs, because a row can only point at something that already exists.
+
+**What would reverse it.** Finding that the history is large, or lives in a system with an API worth
+reading directly. Neither looks true.
+
+---
+
+## D10 — Both spellings of a name, in two fields
+
+**Decided.** Twenty's `name` holds the Latin-script name. A second field, `nameTh`, holds the Thai
+one. Person gets a `FULL_NAME` so first and surname stay separable; Company gets a `TEXT`, because a
+registered company name is one string.
+
+**Why not one field with whatever the client uses.** Because both spellings are real and needed in
+different places. A Thai passport carries both. The visa file, the bank and anything in English want
+the Latin one; the land office, the DBD record and any Thai court filing want the Thai one.
+Romanisation is lossy in both directions and there is no rule that recovers one from the other, so
+storing one and deriving the other is not available. Keeping the pair is the only version that does
+not lose information.
+
+**It also mostly answers O4.** Twenty cannot index Thai: search runs through
+`to_tsvector('simple', ...)`, which has no Thai word boundaries. With a Latin name on essentially
+every record, Twenty's own search works for essentially every record. The Thai field is not
+searchable that way and does not need to be, because `contains` filters are substring matches and
+work on Thai fine. The Postgres tokenizer extension drops from likely requirement to last resort.
+
+**Cost of being wrong:** two fields nobody fills in. Nothing depends on them being populated.
+
+**What would reverse it.** Discovering staff want to type a Thai name into the global search box
+rather than a filter. That is a real possibility and it is question 14 and 37 in
+[`DISCOVERY.md`](./DISCOVERY.md).
+
+---
+
 ## D9 — The word is Job, not Matter
 
 **Decided.** A piece of client work is a **Job** in the interface.
@@ -271,7 +318,7 @@ putting to the owner in one sitting.
 | O1 | Does TLLACC keep timesheets, or do work logs move here? | `WorkLog` design |
 | O2 | Does TLLACC currently issue invoices? Two systems issuing them is the failure mode. | Invoice ownership |
 | O3 | Relabel `Opportunity` as Job, or build a separate `Job` object? | Start relabelled; split when it chafes |
-| O4 | Do staff need to search **Thai contact names** in the CRM? Needs a Postgres tokenizer extension. | Search config |
+| O4 | Mostly answered by D10: a Latin name on every record makes Twenty's search work. What remains is whether staff want to type a **Thai** name into global search rather than a filter. | Search config |
 | O5 | Which slip verification provider, at what cost and failure rate? | Payment automation |
 | O6 | Build the booking availability engine, or use Cal.com? | Leaning build; the rules are simple |
 | O7 | Row-level permissions for job confidentiality — worth an Enterprise subscription? | Permission model |

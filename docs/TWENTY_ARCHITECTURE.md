@@ -689,6 +689,12 @@ Consequences:
 Decide which is needed: Thai **message text** search (solvable in our app) or Thai **contact name**
 search in the CRM (needs the Postgres extension).
 
+**Largely defused by D10.** Every client carries a Latin-script name in Twenty's own `name` field,
+with the Thai spelling in a second `nameTh` field beside it. Twenty's search therefore finds
+essentially every record. `nameTh` is not tokenized and does not need to be: `contains` is a
+substring match and works on Thai. The extension is now a last resort, wanted only if staff turn out
+to want a Thai name in the global search box rather than in a filter.
+
 ### Additional verified findings
 
 Established after the first audit pass, and load-bearing for [`JOBS.md`](./JOBS.md).
