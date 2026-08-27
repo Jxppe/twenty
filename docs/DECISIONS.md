@@ -14,16 +14,26 @@ from use. Contribute the locale upstream first; carry a patch meanwhile.
 **Why.** Staff read the whole application, not just our screens. English chrome with Thai panels is
 worse than either extreme, so shipping Thai only in our own surfaces is not an answer.
 
-**Why it is cheap.** VERIFIED: `th-TH` is missing from
-`packages/twenty-shared/src/translations/constants/AppLocales.ts`, which lists 31 locales. Adding it
-is **one line** in an MIT package, and the locale picker, validation and `dynamicActivate` all derive
-from that constant. **Lingui falls back to the English source string for missing entries**, so a
-partial catalogue works: translate the few hundred strings staff read daily and ship. Nothing breaks
-while it is incomplete. Full coverage would be 3,931 front strings, 2,158 server, 67 email.
+**Corrected: it is not one line, and upstream will not take it.**
 
-**This is the one accepted exception to D1**, and a mild one: `twenty-shared` is MIT, so there is no
-licence consequence, and the diff is a single array entry. The cost is a merge conflict on upgrade,
-which is why upstream contribution comes first.
+[PR 17225](https://github.com/twentyhq/twenty/pull/17225) added exactly these four locales, `th-TH`
+among them, and was closed by a maintainer: *"We're not open to adding more locales for now. We need
+to improve quality for existing locales first."* So contributing upstream is not the escape hatch,
+and the patch is ours to carry indefinitely.
+
+Three files, not one, all verified in the source:
+
+| File | What happens without it |
+| --- | --- |
+| `twenty-shared/.../AppLocales.ts` | The locale does not exist |
+| `twenty-front/.../useLocaleOptions.ts` | **Thai never appears in the picker.** The list is a hand-written array of 30 entries, not derived from `APP_LOCALES` |
+| `twenty-front/.../getDateFnsLocale.ts` | Thai dates format with English rules. The switch has an `en-US` default, so this degrades rather than crashes |
+
+**Lingui still falls back to the English source string**, so a partial catalogue works and nothing
+breaks while it is incomplete. Full coverage would be 3,931 front strings, 2,158 server, 67 email.
+
+**This is the one accepted exception to D1.** `twenty-shared` is MIT so there is no licence
+consequence, but the merge-conflict surface is three files in two packages, and permanent.
 
 **Gates our own Thai strings:** app translations are typed `Partial<Record<AppLocale, ...>>`, so the
 app cannot ship Thai until the platform knows the locale.
@@ -34,7 +44,7 @@ and can be bilingual today.
 **Language split, decided separately and unchanged:** quotations, invoices and email stay mostly
 English. Thai is what clients write to us in, and what the interface must be able to become.
 
-**Reverses if:** upstream adds `th-TH` itself, which removes the divergence and nothing else.
+**Reverses if:** upstream reopens to new locales. On the evidence of PR 17225, do not plan on it.
 
 ---
 
@@ -59,13 +69,23 @@ See [`MATTERS.md`](./MATTERS.md).
 **Decided.** Change `labelSingular` / `labelPlural` / `icon` on standard objects so the UI reads as a
 law firm. Never change `nameSingular`.
 
-**Why.** VERIFIED: `updateObject` accepts `labelSingular`, `labelPlural`, `nameSingular`, `icon` and
-`isActive`, with no guard blocking standard objects. But `nameSingular` is the API contract, so
-renaming `opportunity` breaks `/rest/opportunities` and every integration.
+**Why.** `nameSingular` is the API contract, so renaming `opportunity` would break
+`/rest/opportunities` and every integration. Labels are free.
 
-`isLabelSyncedWithName` defaults to keeping them in step. **Turn it off on anything relabelled.**
+**Corrected after it failed against a live instance.** There *is* a guard, and it is a whitelist:
+`FLAT_OBJECT_METADATA_EDITABLE_PROPERTIES.standard` allows only `labelSingular`, `labelPlural`,
+`icon`, `description`, `color`, `isActive` and `isSearchable` on a standard object. `nameSingular`
+and `namePlural` are absent, which enforces this decision for us.
 
-**Reverses if:** an upgrade starts overwriting labels on standard objects. Watch for it.
+So is **`isLabelSyncedWithName`**, and sending it fails the entire update with `Cannot edit standard
+object metadata properties`. It is a custom-object property. Standard-object labels are stored as
+*overrides* instead, which is why they do not need desyncing. Set it on our own objects, never on
+Twenty's.
+
+**Writing any of this needs the `DATA_MODEL` permission flag** on the app's role. Record permissions
+do not cover object metadata.
+
+**Reverses if:** an upgrade starts overwriting label overrides on standard objects. Watch for it.
 
 ---
 

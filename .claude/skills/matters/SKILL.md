@@ -24,10 +24,16 @@ Blocking items first, deadlines second, open work third, money last. Probability
 
 Change `labelSingular`, `labelPlural` and `icon` on standard objects. **Never change
 `nameSingular`** - it is the API contract, so renaming `opportunity` breaks `/rest/opportunities`
-and every integration.
+and every integration. The server enforces this: only the properties in
+`FLAT_OBJECT_METADATA_EDITABLE_PROPERTIES.standard` are accepted.
 
-`isLabelSyncedWithName` defaults to keeping label and name in step. **Turn it off on anything
-relabelled.**
+**Do not send `isLabelSyncedWithName` on a standard object.** It is a custom-object property, and
+including it fails the entire update with `Cannot edit standard object metadata properties`.
+Standard-object labels are stored as overrides, so there is nothing to desync. On our own objects it
+applies as normal.
+
+Writing object metadata at all needs the **`DATA_MODEL` permission flag** on the app's role: record
+permissions do not cover it.
 
 Matter starts as a relabelled `Opportunity`, which inherits pipelines, kanban and every existing
 view for free. Split it into its own object only when the shared shape genuinely chafes (O3).

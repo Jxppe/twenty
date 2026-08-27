@@ -37,8 +37,8 @@ Skills in `.claude/skills/` carry the same rules in short form.
 licensing: Twenty moves fast and every core edit is a permanent merge conflict. Before proposing a
 change under `packages/`, say which extension point you checked and why it does not work.
 
-The one accepted exception is adding `th-TH` to `AppLocales.ts` (D8): one line, MIT package,
-contributed upstream first.
+The one accepted exception is adding `th-TH` (D8): three files, MIT package, and upstream has
+declined new locales, so it is ours to carry.
 
 **2. Inspect Twenty before building a replacement.** It provides contacts, companies, tasks with
 assignees and due dates, polymorphic task targets, notes, timeline activity, custom objects and
@@ -46,8 +46,10 @@ fields, calendar views, permissions, workflows, REST/GraphQL/MCP APIs, webhooks,
 agents. Check the source; do not assume.
 
 **3. Relabel, do not rename.** Change `labelSingular` / `labelPlural` / `icon` to make the UI read as
-a law firm. Never change `nameSingular`: it is the API contract. Turn off `isLabelSyncedWithName` on
-anything relabelled.
+a law firm. Never change `nameSingular`: it is the API contract, and the server rejects it on
+standard objects anyway. Do not send `isLabelSyncedWithName` on a standard object either: it is a
+custom-object property, and including it fails the whole update. Writing object metadata needs the
+`DATA_MODEL` permission flag on the app's role.
 
 **4. Model work, not pipeline.** A record page leads with what is blocking and what is due. Amount
 and probability are not the point. If a field only supports a sales forecast, it does not belong on
@@ -56,7 +58,8 @@ the page.
 **5. The UI must be able to switch to Thai.** Staff read the whole application, so English chrome
 with Thai panels is not an answer. Lingui falls back to the English source, so a partial catalogue
 ships fine and grows from use. Quotations, invoices and email stay mostly English; Thai is what
-clients write to us in. See D8.
+clients write to us in. Adding the locale touches `AppLocales.ts`, `useLocaleOptions.ts` and
+`getDateFnsLocale.ts`, and upstream has closed the door on new locales. See D8.
 
 **6. Preserve upstream compatibility.** Track `upstream/main`. Prefer contributing a change upstream
 over carrying a patch. Record unavoidable divergence in `docs/TWENTY_ARCHITECTURE.md` under upgrade

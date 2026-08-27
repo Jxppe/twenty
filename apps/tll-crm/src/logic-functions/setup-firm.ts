@@ -10,6 +10,11 @@ import { RELABEL_STANDARD_OBJECTS_FUNCTION_UNIVERSAL_IDENTIFIER } from 'src/cons
 // Relabel, never rename: nameSingular is the API contract, so renaming
 // `opportunity` would break /rest/opportunities and every integration. An app
 // manifest cannot express this, so it goes through the metadata API on install.
+//
+// Only the properties in FLAT_OBJECT_METADATA_EDITABLE_PROPERTIES.standard may
+// be sent for a standard object. isLabelSyncedWithName is not one of them, and
+// including it fails the whole update: it is a custom-object property, and
+// standard labels are stored as overrides instead.
 const RELABELS = [
   {
     universalIdentifier:
@@ -84,8 +89,6 @@ const relabelStandardObjects = async (): Promise<{
                 labelSingular: relabel.labelSingular,
                 labelPlural: relabel.labelPlural,
                 icon: relabel.icon,
-                // Without this the label snaps back to match nameSingular.
-                isLabelSyncedWithName: false,
               },
             },
           },
