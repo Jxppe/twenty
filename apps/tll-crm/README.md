@@ -81,25 +81,33 @@ Both containers restart with the NAS, so a failure here is usually the NAS itsel
 `twenty` and `dev` are scripts in this folder that call the CLI's node bundle directly, so they work
 whether or not yarn is healthy on the machine.
 
-## Turn off Twenty's "create a company" workflow
+## Twenty's "create company when adding a new person" workflow
 
-A workspace seeded from Twenty's dev data carries a **workflow that creates an organization every
-time a person is created**, named after the domain of their email address. MEASURED on this
-workspace: seeding six clients produced four junk organizations (`example.co.th`, `example.de`,
-`example.se`, `example.co.uk`) and attached every client to the domain-derived one, overriding the
-organization each was explicitly given.
+A workspace seeded from Twenty's dev data carries an active workflow of this name. It reads the new
+person's email, and for a **business** domain it finds or creates an organization and links them to
+it. It has an explicit "Is this a personal email?" step feeding an "If business email" filter, so
+gmail, hotmail and the rest are skipped by design.
 
-For this firm that is actively wrong. Most clients are individuals, so it would mint an organization
-called `gmail.com` and file half the client base under it.
+MEASURED: seeding six clients produced six runs and four organizations named `example.co.th`,
+`example.de`, `example.se` and `example.co.uk`, and each client was linked to the domain-derived
+organization rather than the one the seeder gave them. That is the workflow working correctly on
+seed addresses that look like company domains, not a bug.
 
-Turn it off under **Workflows** in the sidebar before entering real clients. It is workspace data
-rather than code, so nothing in this repository disables it and it survives every sync.
+**Whether to keep it is a judgement call, not an obvious fix.** For corporate clients it saves
+typing. Against it: it overrides an organization chosen deliberately, and it creates an organization
+from a domain rather than from a real registration, which for a firm that files companies is a
+different kind of record than the ones staff enter by hand. The Deactivate button is top right of the
+workflow page.
 
-Two details worth knowing if you meet the damage rather than prevent it:
+Two details if you meet the damage rather than prevent it:
 
-- It fires on **create only**. Correcting a person's organization afterwards sticks.
-- Deleting the junk organization clears the link, so the fix is: correct the ones that should point
-  somewhere, then delete the domain-named organizations.
+- The trigger reads "Record is created or updated", but correcting a person's organization afterwards
+  held: six creates produced six runs, and three subsequent updates produced none.
+- Deleting the domain-named organization clears the link. So the order is: point the ones that belong
+  somewhere at the right organization, then delete the domain-named ones.
+
+It is workspace data rather than code, so nothing in this repository changes it and it survives every
+sync.
 
 ## The watcher dies after a few hours
 
