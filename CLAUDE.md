@@ -89,6 +89,9 @@ channels, payment methods, accounting providers. Not for CRUD.
   layer by running `yarn install` against it in a bare container. Nothing in that file may reference
   a local path the server does not copy, or every logic function fails with
   `ROUTE_TRIGGER_PLATFORM_ERROR`.
+- Twenty derives record-page view field identifiers from `(view, field, owning application)`. Never
+  invent one: reposition by declaring the derived identifier, or the sync rejects every field with
+  `View field with same fieldMetadataUniversalIdentifier and viewUniversalIdentifier already exists`.
 - `theme.spacing` is a token record: `theme.spacing[2]`, not `theme.spacing(2)`.
 - Import enums from `twenty-sdk/define`, not `twenty-shared/types`.
 - `navigate()` takes an `AppPath` enum member with named params, not a URL.

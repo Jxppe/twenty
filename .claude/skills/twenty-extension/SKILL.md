@@ -74,6 +74,16 @@ All of this, declared as TypeScript and synced with the CLI. Verified against
   they write, so running them again is free.
 - **Every view must carry its object's label identifier field at position 0**, or the sync fails with
   `INVALID_VIEW_DATA: Label identifier view field has to be in the lowest position`.
+- **Never mint a universal identifier for a view field on a record page.** The engine already
+  provisions one per field and derives its identifier from `(view, field, the field's owning
+  application)`: `field-record-page-view-field-on-create-side-effect-handler.service.ts:135`. A fresh
+  UUID makes the sync attempt a second view field for a pair that already has one, and every one of
+  them fails with `INVALID_VIEW_DATA: View field with same fieldMetadataUniversalIdentifier and
+  viewUniversalIdentifier already exists`. Repositioning is an update, so reuse the derivation:
+  `getSystemViewFieldUniversalIdentifier` from `twenty-sdk/define` for your own fields, and
+  `STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.<object>.views.<view>.viewFields.<name>` for Twenty's.
+  `position`, `isVisible` and `viewFieldGroupId` are the editable properties, on standard view fields
+  as much as your own (`flat-view-field-editable-properties.constant.ts`).
 - **`type` is a reserved field name** (`RESERVED_METADATA_NAME_KEYWORDS` in `twenty-shared`), along
   with a long list of others. The server renames a reserved field to `<name>Custom` rather than
   refusing outright, so check the list before naming a field.
