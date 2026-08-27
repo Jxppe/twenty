@@ -12,6 +12,6 @@ export default defineViewField({
   viewUniversalIdentifier: JOB_RECORD_PAGE_VIEW_UNIVERSAL_IDENTIFIER,
   fieldMetadataUniversalIdentifier: MATTER_MATTER_DEADLINES_FIELD_UNIVERSAL_IDENTIFIER,
   viewFieldGroupUniversalIdentifier: JOB_RECORD_PAGE_GROUPS.relations.universalIdentifier,
-  position: 0,
+  position: -3,
   isVisible: true,
 });

@@ -12,7 +12,9 @@ export const JOB_RECORD_PAGE_VIEW_UNIVERSAL_IDENTIFIER = recordPageView.universa
 
 export const JOB_RECORD_PAGE_GROUPS = recordPageView.viewFieldGroups;
 
-export const JOB_RECORD_PAGE_STANDARD_VIEW_FIELDS = recordPageView.viewFields;
+// Twenty's own view fields on this page sit at positions 0, 1, 2 in each group and belong to the
+// twenty-standard application, so we cannot move them. Negative positions put ours above them
+// instead. This view is a FIELDS_WIDGET, which is exempt from both label-identifier position rules.
 
 // The engine provisions a view field for every field on this page and derives its identifier from
 // the view, the field and the application owning the field. Reusing that derivation is what makes

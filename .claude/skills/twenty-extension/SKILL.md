@@ -82,8 +82,17 @@ All of this, declared as TypeScript and synced with the CLI. Verified against
   viewUniversalIdentifier already exists`. Repositioning is an update, so reuse the derivation:
   `getSystemViewFieldUniversalIdentifier` from `twenty-sdk/define` for your own fields, and
   `STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.<object>.views.<view>.viewFields.<name>` for Twenty's.
-  `position`, `isVisible` and `viewFieldGroupId` are the editable properties, on standard view fields
-  as much as your own (`flat-view-field-editable-properties.constant.ts`).
+  `position`, `isVisible` and `viewFieldGroupId` are the editable properties
+  (`flat-view-field-editable-properties.constant.ts`).
+- **An app cannot reposition a view field another application owns.** MEASURED: declaring the derived
+  identifier for Twenty's own `stage`, `amount`, `closeDate`, `company`, `pointOfContact` and `owner`
+  on the Opportunity record page failed with `ENTITY_ALREADY_EXISTS: Cannot create viewField:
+  universalIdentifier ... already exists in viewField maps from application
+  "20202020-64aa-4b6f-b003-9c74b97cee20"`, while the seven fields our own app owns went through in
+  the same sync. Sort around them instead: `position` is `double precision`, and a FIELDS_WIDGET view
+  is exempt from both label-identifier position rules (`flat-view-field-validator.service.ts:260`),
+  so a negative position puts your field above a standard one you cannot move. Twenty seeds each
+  group at 0, 1, 2 (`compute-standard-opportunity-view-fields.util.ts:163`).
 - **`type` is a reserved field name** (`RESERVED_METADATA_NAME_KEYWORDS` in `twenty-shared`), along
   with a long list of others. The server renames a reserved field to `<name>Custom` rather than
   refusing outright, so check the list before naming a field.
