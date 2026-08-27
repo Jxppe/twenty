@@ -65,6 +65,10 @@ ever sees `matterDeadlineId`. So the names stay and the labels are what moved.
 If that ever becomes confusing enough to be worth a migration, it is a rename plus a data move, not
 a label edit.
 
+It is also no longer only a preference: `job` and `jobs` are both in Twenty's
+`RESERVED_METADATA_NAME_KEYWORDS`, so a field pointing at a job cannot be called `job` at all. The
+work log's relation is `matter`, labelled Job.
+
 
 
 ### Job
