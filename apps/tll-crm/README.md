@@ -33,6 +33,17 @@ not. Create one in the workspace under Settings, APIs, then:
 twenty remote:add --url http://<host>:2020 --as nas --api-key <key>
 ```
 
+### Install hooks need a nudge
+
+`dev` syncs metadata and nothing else, so the post-install hook that relabels the standard objects
+and seeds the billing entities does not fire on a sync. Run it when either is missing:
+
+```
+twenty dev:function:exec --postInstall
+```
+
+It reads before writing, so running it twice costs nothing.
+
 ### What is still not instant
 
 Objects and fields are database migrations, so a change to them is a real

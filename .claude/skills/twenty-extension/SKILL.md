@@ -55,6 +55,19 @@ All of this, declared as TypeScript and synced with the CLI. Verified against
 
 ## Gotchas that cost hours
 
+- **`dev` does not run install hooks.** It syncs metadata, nothing else, so a
+  `definePostInstallLogicFunction` never fires during development however many times you sync.
+  MEASURED: seeded records absent and standard-object relabels not applied, with no error anywhere.
+  Run it by hand with `twenty dev:function:exec --postInstall`. Write install hooks to read before
+  they write, so running them again is free.
+- **Every view must carry its object's label identifier field at position 0**, or the sync fails with
+  `INVALID_VIEW_DATA: Label identifier view field has to be in the lowest position`.
+- **`type` is a reserved field name** (`RESERVED_METADATA_NAME_KEYWORDS` in `twenty-shared`), along
+  with a long list of others. The server renames a reserved field to `<name>Custom` rather than
+  refusing outright, so check the list before naming a field.
+- **A `FILES` field must declare `maxNumberOfValues`**, and the SDK spells that key
+  `universalSettings`, not `settings`.
+
 - **`package.json` must not reference files the server does not copy.** The server builds the logic
   function dependency layer by running `yarn install` against it in a bare directory. A `postinstall`
   pointing at `scripts/` makes every logic function fail with `ROUTE_TRIGGER_PLATFORM_ERROR`.
