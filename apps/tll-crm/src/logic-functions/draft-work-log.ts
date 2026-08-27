@@ -3,6 +3,9 @@ import { defineLogicFunction } from 'twenty-sdk/define';
 
 import { DRAFT_WORK_LOG_FUNCTION_UNIVERSAL_IDENTIFIER } from 'src/constants/universal-identifiers';
 
+// twenty-sdk declares LogicFunctionExecutionContext but does not export it.
+type ExecutionContext = { workspaceMemberId: string | null };
+
 type Payload = {
   workspaceMemberId?: string;
   workedOn?: string;
@@ -66,10 +69,17 @@ const nodesOf = <TRow,>(
 // The whole point of work logs, per docs/JOBS.md section 5: a blank form at 6pm
 // gets skipped. Everything here is something the system already knows, so the
 // form opens mostly answered and the only real question left is how long it took.
-const handler = async (payload: Payload): Promise<{ drafts: WorkLogDraft[] }> => {
-  const { workspaceMemberId, workedOn } = payload;
+const handler = async (
+  payload: Payload,
+  context: ExecutionContext,
+): Promise<{ drafts: WorkLogDraft[] }> => {
+  // Drafting your own day is the normal case, so neither argument should have to
+  // be typed. Passing them is for a manager filling in for someone who is out.
+  const workspaceMemberId =
+    payload.workspaceMemberId ?? context.workspaceMemberId ?? undefined;
+  const workedOn = payload.workedOn ?? new Date().toISOString().slice(0, 10);
 
-  if (workspaceMemberId === undefined || workedOn === undefined) {
+  if (workspaceMemberId === undefined) {
     return { drafts: [] };
   }
 

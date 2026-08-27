@@ -263,6 +263,9 @@ the licence cost is nil and the merge cost is the only thing being paid.
 
 ## Open, not yet decided
 
+`docs/DISCOVERY.md` restates these in plain language, alongside the wider set of questions worth
+putting to the owner in one sitting.
+
 | # | Question | Blocks |
 | --- | --- | --- |
 | O1 | Does TLLACC keep timesheets, or do work logs move here? | `WorkLog` design |

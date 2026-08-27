@@ -25,6 +25,7 @@ industry-neutral. Law-firm concepts are first-class.
 | `docs/PAYMENTS.md` | PromptPay, Thai bank transfer |
 | `docs/OMNICHANNEL.md` | The messaging model. Owned by Takdai, kept here for the CRM contract |
 | `docs/REFERENCES.md` | Before implementing any major feature |
+| `docs/DISCOVERY.md` | What we still have to ask the owner, and where the answers go |
 | `DESIGN.md` | Any UI work |
 | `docs/PRODUCT.md` | The original brief. Describes Takdai, so read it as history |
 
