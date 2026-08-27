@@ -21,9 +21,16 @@ This was not theoretical: the seven Job placement files worked only because thos
 existed here from an earlier sync. **The app could not have been installed on a new workspace**, and
 that would have surfaced when setting up the real one.
 
-**What the hook does.** Matches the view field by the identifier it derives the same way the engine
-does, matches groups by `name` because they carry no universal identifier, skips anything already in
-position, and skips fields that do not exist rather than failing the install.
+**What the hook does.** Resolves everything by name against the server: the object by
+`nameSingular`, the field by `name`, the view by `objectMetadataId` plus `key`, the view field by
+`fieldMetadataId`, and the group by `name` because groups carry no universal identifier. It skips
+anything already in position and reports what it could not find rather than failing the install.
+
+**Not by compiled identifier.** The first version derived the view identifier from
+`STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS`, which works in Node and does not survive into a bundled
+logic function: MEASURED, all five arrived as non-strings that serialised to `null` while the server
+held exactly the values computed locally. Resolving by name is also what D6 already required for the
+same underlying reason.
 
 **Cost.** Placement no longer travels with a `dev` sync: it needs
 `twenty dev:function:exec --postInstall`, the same nudge relabels already need.

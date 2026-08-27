@@ -211,78 +211,156 @@ const seedFirmStructure = async (): Promise<{
   return { billingEntities: createdEntities, practiceAreas: createdAreas };
 };
 
-type ViewRow = { id?: string; universalIdentifier?: string };
+type ViewRow = {
+  id?: string;
+  objectMetadataId?: string;
+  key?: string | null;
+};
 type ViewFieldRow = {
   id?: string;
-  universalIdentifier?: string;
+  fieldMetadataId?: string;
   position?: number;
   isVisible?: boolean;
   viewFieldGroupId?: string | null;
 };
 type ViewFieldGroupRow = { id?: string; name?: string };
+type ObjectRow = {
+  id?: string;
+  nameSingular?: string;
+  fields?: { edges?: { node?: { id?: string; name?: string } }[] };
+};
 
 // Placement cannot be declared in the manifest. Creating a field makes the
 // engine create its view field too, at the identifier a declaration would have
 // to reuse, and the two creates collide (RESERVED_SYSTEM_UNIVERSAL_IDENTIFIER)
 // in an atomic plan that then never converges. Applying it here instead runs
 // after the sync, when the rows exist and this is an update.
+//
+// Everything is resolved by name against the server. The compiled identifier
+// constants are not usable here: MEASURED, they reach a bundled logic function
+// as non-strings, and matching on nameSingular is the rule anyway.
 const applyFieldPlacements = async (): Promise<{
   moved: number;
   placementErrors: string[];
-  diagnostics: {
-    expectedViews: string[];
-    viewsReturned: number;
-    sampleViewUniversalIdentifiers: string[];
-  };
 }> => {
   const client = new MetadataApiClient();
   const placementErrors: string[] = [];
   let moved = 0;
 
-  const viewsResult = (await client.query({
-    getViews: { id: true, universalIdentifier: true },
-  })) as { getViews?: ViewRow[] };
+  const objectsResult = (await client.query({
+    objects: {
+      __args: { paging: { first: 200 }, filter: {} },
+      edges: {
+        node: {
+          id: true,
+          nameSingular: true,
+          fields: {
+            __args: { paging: { first: 200 }, filter: {} },
+            edges: { node: { id: true, name: true } },
+          },
+        },
+      },
+    },
+  })) as { objects?: { edges?: { node?: ObjectRow }[] } };
 
-  const viewIdByUniversalIdentifier = new Map<string, string>();
+  const objectByName = new Map<string, { id: string; fieldIdByName: Map<string, string> }>();
 
-  for (const view of viewsResult.getViews ?? []) {
-    if (view.universalIdentifier !== undefined && view.id !== undefined) {
-      viewIdByUniversalIdentifier.set(view.universalIdentifier, view.id);
-    }
-  }
+  for (const edge of objectsResult.objects?.edges ?? []) {
+    const node = edge.node;
 
-  const viewUniversalIdentifiers = [
-    ...new Set(FIELD_PLACEMENTS.map((placement) => placement.viewUniversalIdentifier)),
-  ];
-
-  for (const viewUniversalIdentifier of viewUniversalIdentifiers) {
-    const viewId = viewIdByUniversalIdentifier.get(viewUniversalIdentifier);
-
-    if (viewId === undefined) {
-      placementErrors.push(
-        `View not found: ${JSON.stringify(viewUniversalIdentifier)}`,
-      );
+    if (node?.nameSingular === undefined || node.id === undefined) {
       continue;
     }
 
+    const fieldIdByName = new Map<string, string>();
+
+    for (const fieldEdge of node.fields?.edges ?? []) {
+      if (fieldEdge.node?.name !== undefined && fieldEdge.node.id !== undefined) {
+        fieldIdByName.set(fieldEdge.node.name, fieldEdge.node.id);
+      }
+    }
+
+    objectByName.set(node.nameSingular, { id: node.id, fieldIdByName });
+  }
+
+  const viewsResult = (await client.query({
+    getViews: { id: true, objectMetadataId: true, key: true },
+  })) as { getViews?: ViewRow[] };
+
+  const viewIdByObjectAndKey = new Map<string, string>();
+
+  for (const view of viewsResult.getViews ?? []) {
+    if (view.id !== undefined && view.objectMetadataId !== undefined && view.key) {
+      viewIdByObjectAndKey.set(`${view.objectMetadataId}:${view.key}`, view.id);
+    }
+  }
+
+  const viewIdsNeeded = new Set<string>();
+  const resolved: {
+    viewId: string;
+    fieldMetadataId: string;
+    groupName?: string;
+    position: number;
+    label: string;
+  }[] = [];
+
+  for (const placement of FIELD_PLACEMENTS) {
+    const label = `${placement.objectNameSingular}.${placement.fieldName} (${placement.viewKey})`;
+    const object = objectByName.get(placement.objectNameSingular);
+
+    if (object === undefined) {
+      placementErrors.push(`${label}: object not found`);
+      continue;
+    }
+
+    const fieldMetadataId = object.fieldIdByName.get(placement.fieldName);
+
+    if (fieldMetadataId === undefined) {
+      placementErrors.push(`${label}: field not found`);
+      continue;
+    }
+
+    const viewId = viewIdByObjectAndKey.get(`${object.id}:${placement.viewKey}`);
+
+    if (viewId === undefined) {
+      placementErrors.push(`${label}: view not found`);
+      continue;
+    }
+
+    viewIdsNeeded.add(viewId);
+    resolved.push({
+      viewId,
+      fieldMetadataId,
+      position: placement.position,
+      label,
+      ...(placement.groupName !== undefined ? { groupName: placement.groupName } : {}),
+    });
+  }
+
+  const viewFieldsByViewId = new Map<string, Map<string, ViewFieldRow>>();
+  const groupIdsByViewId = new Map<string, Map<string, string>>();
+
+  for (const viewId of viewIdsNeeded) {
     const fieldsResult = (await client.query({
       getViewFields: {
         __args: { viewId },
         id: true,
-        universalIdentifier: true,
+        fieldMetadataId: true,
         position: true,
         isVisible: true,
         viewFieldGroupId: true,
       },
     })) as { getViewFields?: ViewFieldRow[] };
 
-    const viewFieldByUniversalIdentifier = new Map<string, ViewFieldRow>();
+    const byFieldMetadataId = new Map<string, ViewFieldRow>();
 
     for (const viewField of fieldsResult.getViewFields ?? []) {
-      if (viewField.universalIdentifier !== undefined) {
-        viewFieldByUniversalIdentifier.set(viewField.universalIdentifier, viewField);
+      if (viewField.fieldMetadataId !== undefined) {
+        byFieldMetadataId.set(viewField.fieldMetadataId, viewField);
       }
     }
+
+    viewFieldsByViewId.set(viewId, byFieldMetadataId);
 
     // Groups carry no universal identifier, so they are matched by name.
     const groupsResult = (await client.query({
@@ -297,71 +375,58 @@ const applyFieldPlacements = async (): Promise<{
       }
     }
 
-    for (const placement of FIELD_PLACEMENTS.filter(
-      (candidate) => candidate.viewUniversalIdentifier === viewUniversalIdentifier,
-    )) {
-      const viewField = viewFieldByUniversalIdentifier.get(
-        placement.viewFieldUniversalIdentifier,
-      );
+    groupIdsByViewId.set(viewId, groupIdByName);
+  }
 
-      if (viewField?.id === undefined) {
-        // The field may simply not exist yet on this workspace, which is not an
-        // error worth failing an install over.
-        continue;
-      }
+  for (const placement of resolved) {
+    const viewField = viewFieldsByViewId
+      .get(placement.viewId)
+      ?.get(placement.fieldMetadataId);
 
-      const viewFieldGroupId =
-        placement.groupName !== undefined
-          ? (groupIdByName.get(placement.groupName) ?? null)
-          : null;
+    if (viewField?.id === undefined) {
+      placementErrors.push(`${placement.label}: no view field on this view`);
+      continue;
+    }
 
-      const isAlreadyPlaced =
-        viewField.position === placement.position &&
-        viewField.isVisible === true &&
-        (viewField.viewFieldGroupId ?? null) === viewFieldGroupId;
+    const viewFieldGroupId =
+      placement.groupName !== undefined
+        ? (groupIdsByViewId.get(placement.viewId)?.get(placement.groupName) ?? null)
+        : null;
 
-      if (isAlreadyPlaced) {
-        continue;
-      }
+    const isAlreadyPlaced =
+      viewField.position === placement.position &&
+      viewField.isVisible === true &&
+      (viewField.viewFieldGroupId ?? null) === viewFieldGroupId;
 
-      try {
-        await client.mutation({
-          updateViewField: {
-            __args: {
-              input: {
-                id: viewField.id,
-                update: {
-                  position: placement.position,
-                  isVisible: true,
-                  viewFieldGroupId,
-                },
+    if (isAlreadyPlaced) {
+      continue;
+    }
+
+    try {
+      await client.mutation({
+        updateViewField: {
+          __args: {
+            input: {
+              id: viewField.id,
+              update: {
+                position: placement.position,
+                isVisible: true,
+                viewFieldGroupId,
               },
             },
-            id: true,
           },
-        });
-        moved += 1;
-      } catch (caught) {
-        placementErrors.push(
-          `${placement.viewFieldUniversalIdentifier}: ${caught instanceof Error ? caught.message : String(caught)}`,
-        );
-      }
+          id: true,
+        },
+      });
+      moved += 1;
+    } catch (caught) {
+      placementErrors.push(
+        `${placement.label}: ${caught instanceof Error ? caught.message : String(caught)}`,
+      );
     }
   }
 
-  return {
-    moved,
-    placementErrors,
-    // One run has to be enough to tell whether the expected identifiers are
-    // wrong or the view list is.
-    diagnostics: {
-      expectedViews: viewUniversalIdentifiers,
-      viewsReturned: viewIdByUniversalIdentifier.size,
-      sampleViewUniversalIdentifiers: [
-        ...viewIdByUniversalIdentifier.keys(),
-      ].slice(0, 8),
-    },
-  };
+  return { moved, placementErrors };
 };
 
 const handler = async () => {
@@ -376,7 +441,7 @@ const handler = async () => {
     seedError = caught instanceof Error ? caught.message : String(caught);
   }
 
-  const { moved, placementErrors, diagnostics } = await applyFieldPlacements();
+  const { moved, placementErrors } = await applyFieldPlacements();
 
   return {
     relabelled,
@@ -385,7 +450,6 @@ const handler = async () => {
     ...(seedError !== undefined ? { seedError } : {}),
     fieldsMoved: moved,
     placementErrors,
-    diagnostics,
   };
 };
 

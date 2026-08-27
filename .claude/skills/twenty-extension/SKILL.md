@@ -84,6 +84,13 @@ All of this, declared as TypeScript and synced with the CLI. Verified against
   `STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.<object>.views.<view>.viewFields.<name>` for Twenty's.
   `position`, `isVisible` and `viewFieldGroupId` are the editable properties
   (`flat-view-field-editable-properties.constant.ts`).
+- **Compiled identifier constants do not survive into a bundled logic function.** MEASURED:
+  `STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.<object>.views.<view>.universalIdentifier` arrived as a
+  non-string that serialised to `null`, while the same expression in Node resolves to a UUID the
+  server agrees with. Inside a logic function, resolve everything by name against the server:
+  `objects` by `nameSingular`, fields by `name`, views by `objectMetadataId` plus `key`
+  (`INDEX` / `FIELDS_WIDGET`), view fields by `fieldMetadataId`, groups by `name`. That is the same
+  rule the Dashboard relabel taught, and it removes the CLI-versus-server skew entirely.
 - **Do not declare view field placement in the manifest at all; apply it from the install hook.**
   `defineViewField` for a field your own app creates cannot work on a fresh install, for the reason
   below, and an app that only works on a workspace where the fields already exist is not installable.
