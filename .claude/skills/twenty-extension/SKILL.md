@@ -89,7 +89,10 @@ All of this, declared as TypeScript and synced with the CLI. Verified against
   non-string that serialised to `null`, while the same expression in Node resolves to a UUID the
   server agrees with. Inside a logic function, resolve everything by name against the server:
   `objects` by `nameSingular`, fields by `name`, views by `objectMetadataId` plus `key`
-  (`INDEX` / `FIELDS_WIDGET`), view fields by `fieldMetadataId`, groups by `name`. That is the same
+  view fields by `fieldMetadataId`, groups by `name`. Note the two system views are found
+  differently: `ViewKey` contains only `INDEX`, so the index view matches on `key`, while the record
+  page carries no key and matches on `type === 'FIELDS_WIDGET'`
+  (`compute-system-view-to-create.util.ts:31`). That is the same
   rule the Dashboard relabel taught, and it removes the CLI-versus-server skew entirely.
 - **Do not declare view field placement in the manifest at all; apply it from the install hook.**
   `defineViewField` for a field your own app creates cannot work on a fresh install, for the reason

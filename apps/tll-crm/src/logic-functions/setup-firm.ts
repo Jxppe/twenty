@@ -215,6 +215,7 @@ type ViewRow = {
   id?: string;
   objectMetadataId?: string;
   key?: string | null;
+  type?: string | null;
 };
 type ViewFieldRow = {
   id?: string;
@@ -284,14 +285,24 @@ const applyFieldPlacements = async (): Promise<{
   }
 
   const viewsResult = (await client.query({
-    getViews: { id: true, objectMetadataId: true, key: true },
+    getViews: { id: true, objectMetadataId: true, key: true, type: true },
   })) as { getViews?: ViewRow[] };
 
+  // ViewKey only has INDEX, so the record page carries no key and is identified
+  // by its type instead (`compute-system-view-to-create.util.ts:31`).
   const viewIdByObjectAndKey = new Map<string, string>();
 
   for (const view of viewsResult.getViews ?? []) {
-    if (view.id !== undefined && view.objectMetadataId !== undefined && view.key) {
-      viewIdByObjectAndKey.set(`${view.objectMetadataId}:${view.key}`, view.id);
+    if (view.id === undefined || view.objectMetadataId === undefined) {
+      continue;
+    }
+
+    if (view.key === 'INDEX') {
+      viewIdByObjectAndKey.set(`${view.objectMetadataId}:INDEX`, view.id);
+    }
+
+    if (view.type === 'FIELDS_WIDGET') {
+      viewIdByObjectAndKey.set(`${view.objectMetadataId}:FIELDS_WIDGET`, view.id);
     }
   }
 
