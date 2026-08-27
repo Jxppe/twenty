@@ -6,6 +6,34 @@ Each entry says what was decided, why, what would reverse it, and what was verif
 
 ---
 
+## D12 — Plain English in the interface, not terms of art
+
+**Decided.** Interface words are chosen for someone reading English as a second language. Where a
+term of art and a plain word both fit, the plain word wins.
+
+Applied so far: the **Practice** folder is **Work**. **Practice area** is **Type of work**.
+**Outstanding deadlines** is **Deadlines due**. This is the same reasoning that produced D9, now
+stated as a rule rather than a one-off.
+
+**Why.** Two failure modes, and the second is the dangerous one.
+
+- **Jargon that means nothing.** "Practice area" is a legal-industry term. Nobody outside the
+  industry has met it, and it has to be learned before the screen can be read.
+- **A common word carrying an uncommon meaning.** Worse, because it does not look like jargon and so
+  nobody asks. "Practice" reads first as rehearsing a skill. "Outstanding" reads first as excellent,
+  which inverts the meaning of the list it labels. A reader who guesses wrong here has no signal that
+  they guessed.
+
+The test: would someone with school English read this correctly on the first try, with no context?
+
+**Cost of being wrong:** labels are the cheapest thing in the system to change. `nameSingular` and
+every identifier stay put, per D6.
+
+**What this does not license.** Renaming things that are already plain, or inventing coy names to
+avoid a word that is simply correct. Deadline, invoice, booking and client are all fine.
+
+---
+
 ## D11 — Historic clients arrive by spreadsheet import, not a migration
 
 **Decided.** The clients the firm already tracks come in through Twenty's own spreadsheet import.

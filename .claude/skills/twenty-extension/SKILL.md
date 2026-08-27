@@ -93,6 +93,10 @@ All of this, declared as TypeScript and synced with the CLI. Verified against
   is exempt from both label-identifier position rules (`flat-view-field-validator.service.ts:260`),
   so a negative position puts your field above a standard one you cannot move. Twenty seeds each
   group at 0, 1, 2 (`compute-standard-opportunity-view-fields.util.ts:163`).
+- **Label for someone reading English as a second language** (D12). Prefer the plain word to the term
+  of art, and watch especially for common words carrying an uncommon meaning: "Practice" reads as
+  rehearsing, "Outstanding" reads as excellent. Those are worse than obvious jargon, because nobody
+  thinks to ask.
 - **`type` is a reserved field name** (`RESERVED_METADATA_NAME_KEYWORDS` in `twenty-shared`), along
   with a long list of others. The server renames a reserved field to `<name>Custom` rather than
   refusing outright, so check the list before naming a field.

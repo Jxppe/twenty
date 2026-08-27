@@ -17,7 +17,7 @@ export default defineField({
   objectUniversalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.opportunity.universalIdentifier,
   type: FieldType.RELATION,
   name: 'practiceArea',
-  label: 'Practice area',
+  label: 'Type of work',
   description: 'The kind of work this job is',
   icon: 'IconScale',
   relationTargetObjectMetadataUniversalIdentifier: PRACTICE_AREA_OBJECT_UNIVERSAL_IDENTIFIER,

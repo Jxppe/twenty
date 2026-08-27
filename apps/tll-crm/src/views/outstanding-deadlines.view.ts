@@ -16,7 +16,7 @@ import {
 // includes everything already done is a list nobody opens twice.
 export default defineView({
   universalIdentifier: DEADLINES_DUE_VIEW_UNIVERSAL_IDENTIFIER,
-  name: 'Outstanding deadlines',
+  name: 'Deadlines due',
   objectUniversalIdentifier: MATTER_DEADLINE_OBJECT_UNIVERSAL_IDENTIFIER,
   type: ViewType.TABLE,
   icon: 'IconAlarm',

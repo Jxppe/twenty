@@ -11,7 +11,7 @@ import {
 
 export default defineNavigationMenuItem({
   universalIdentifier: PRACTICE_AREAS_NAV_ITEM_UNIVERSAL_IDENTIFIER,
-  name: 'Practice areas',
+  name: 'Types of work',
   icon: 'IconScale',
   position: 1,
   type: NavigationMenuItemType.VIEW,

@@ -10,8 +10,8 @@ export default defineObject({
   universalIdentifier: PRACTICE_AREA_OBJECT_UNIVERSAL_IDENTIFIER,
   nameSingular: 'practiceArea',
   namePlural: 'practiceAreas',
-  labelSingular: 'Practice area',
-  labelPlural: 'Practice areas',
+  labelSingular: 'Type of work',
+  labelPlural: 'Types of work',
   description: 'A kind of work the firm does: visa, property, notarization',
   icon: 'IconScale',
   labelIdentifierFieldMetadataUniversalIdentifier:

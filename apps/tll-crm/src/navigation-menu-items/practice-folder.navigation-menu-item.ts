@@ -9,7 +9,7 @@ import {
 
 export default defineNavigationMenuItem({
   universalIdentifier: PRACTICE_FOLDER_NAV_ITEM_UNIVERSAL_IDENTIFIER,
-  name: 'Practice',
+  name: 'Work',
   icon: 'IconBriefcase',
   position: 0,
   type: NavigationMenuItemType.FOLDER,

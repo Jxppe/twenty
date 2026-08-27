@@ -10,7 +10,7 @@ import {
 
 export default defineView({
   universalIdentifier: PRACTICE_AREAS_VIEW_UNIVERSAL_IDENTIFIER,
-  name: 'Practice areas',
+  name: 'Types of work',
   objectUniversalIdentifier: PRACTICE_AREA_OBJECT_UNIVERSAL_IDENTIFIER,
   type: ViewType.TABLE,
   icon: 'IconScale',
