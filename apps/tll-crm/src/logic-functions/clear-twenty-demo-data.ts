@@ -10,13 +10,9 @@ type Payload = { confirm?: boolean };
 // they do compare, and this range holds exactly that prefix. Anything we or the
 // firm creates is a random v4 and cannot collide.
 //
-// Split across `and` because a field takes exactly one operator per object
-// (`validate-and-transform-operator-and-value.util.ts:30`).
-//
-// The bounds are themselves validated as UUIDs, and `isValidUuid` demands a
-// version nibble of 1-5 and a variant of 8-b, so an all-zero bound is rejected.
-// These are the lowest legal UUID carrying each prefix, which is exactly the
-// boundary wanted since Postgres compares uuids bytewise.
+// Two clauses under `and` because a field takes exactly one operator per object,
+// and the bounds are the lowest legal UUID for each prefix because `isValidUuid`
+// rejects an all-zero version and variant.
 const SEED_RANGE_FILTER = {
   and: [
     { id: { gte: '20202020-0000-1000-8000-000000000000' } },
@@ -24,76 +20,88 @@ const SEED_RANGE_FILTER = {
   ],
 };
 
+// Jobs before people and people before organizations: a row cannot go while
+// something still points at it.
 const TARGETS = [
-  { plural: 'opportunities', singular: 'Opportunity' },
-  { plural: 'people', singular: 'Person' },
-  { plural: 'companies', singular: 'Company' },
+  { plural: 'opportunities', mutationPlural: 'Opportunities' },
+  { plural: 'people', mutationPlural: 'People' },
+  { plural: 'companies', mutationPlural: 'Companies' },
 ] as const;
 
-const PAGE_SIZE = 60;
-
-const idsInSeedRange = async (
+const countInRange = async (
   client: CoreApiClient,
   plural: string,
-): Promise<string[]> => {
+): Promise<number> => {
   const result = (await client.query({
     [plural]: {
-      __args: { filter: SEED_RANGE_FILTER, first: PAGE_SIZE },
-      edges: { node: { id: true } },
+      __args: { filter: SEED_RANGE_FILTER, first: 1 },
+      totalCount: true,
     },
-  })) as Record<string, { edges?: { node?: { id?: string } }[] }>;
+  })) as Record<string, { totalCount?: number } | undefined>;
 
-  return (result[plural]?.edges ?? [])
-    .map((edge) => edge.node?.id)
-    .filter((id): id is string => id !== undefined);
+  return result[plural]?.totalCount ?? 0;
 };
 
 const handler = async (
   payload: Payload,
 ): Promise<{
-  deleted: Record<string, number>;
-  remaining: Record<string, number>;
   dryRun: boolean;
+  matched: Record<string, number>;
+  removed: Record<string, number>;
+  errors: string[];
 }> => {
   const client = new CoreApiClient();
   const confirm = payload.confirm === true;
-  const deleted: Record<string, number> = {};
-  const remaining: Record<string, number> = {};
+  const matched: Record<string, number> = {};
+  const removed: Record<string, number> = {};
+  const errors: string[] = [];
 
   for (const target of TARGETS) {
-    if (!confirm) {
-      // A dry run reports one page, which is enough to show the range matches
-      // the right records without counting all 1,200 of them.
-      remaining[target.plural] = (await idsInSeedRange(client, target.plural))
-        .length;
-      deleted[target.plural] = 0;
+    matched[target.plural] = await countInRange(client, target.plural);
+  }
+
+  if (!confirm) {
+    return { dryRun: true, matched, removed, errors };
+  }
+
+  for (const target of TARGETS) {
+    // One filtered mutation rather than a round trip per record: deleting these
+    // one at a time is thousands of calls and outruns the function timeout.
+    try {
+      await client.mutation({
+        [`delete${target.mutationPlural}`]: {
+          __args: { filter: SEED_RANGE_FILTER },
+          id: true,
+        },
+      });
+    } catch (error) {
+      errors.push(`delete ${target.plural}: ${String(error)}`);
       continue;
     }
 
-    let removed = 0;
-
-    // Jobs go before people and people before companies: a row cannot be
-    // deleted while something still points at it.
-    for (;;) {
-      const ids = await idsInSeedRange(client, target.plural);
-
-      if (ids.length === 0) {
-        break;
-      }
-
-      for (const id of ids) {
-        await client.mutation({
-          [`delete${target.singular}`]: { __args: { id }, id: true },
-        });
-        removed += 1;
-      }
+    // Soft delete only hides them. Destroy is what actually frees the names and
+    // stops them coming back in a deleted-records view.
+    try {
+      await client.mutation({
+        [`destroy${target.mutationPlural}`]: {
+          __args: { filter: SEED_RANGE_FILTER },
+          id: true,
+        },
+      });
+    } catch (error) {
+      errors.push(
+        `destroy ${target.plural} (soft delete succeeded): ${String(error)}`,
+      );
     }
 
-    deleted[target.plural] = removed;
-    remaining[target.plural] = 0;
+    removed[target.plural] = await (async () => {
+      const left = await countInRange(client, target.plural);
+
+      return matched[target.plural] - left;
+    })();
   }
 
-  return { deleted, remaining, dryRun: !confirm };
+  return { dryRun: false, matched, removed, errors };
 };
 
 export default defineLogicFunction({

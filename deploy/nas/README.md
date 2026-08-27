@@ -310,6 +310,21 @@ In the GUI: the Project's Update button, or pull the new image and recreate.
 
 Take a dump first. Migrations run automatically on server start and are not reversible.
 
+## Cloudflare times out before the function does
+
+A logic function may run for `timeoutSeconds`, which defaults to 300 and can reach 900. The tunnel
+does not care: Cloudflare cuts the request at about 100 seconds and returns **524**, while the
+function keeps running on the server to completion.
+
+So anything slow has to be designed for the 100-second ceiling rather than the 300-second one:
+
+- Prefer one filtered `deleteMany` or `updateMany` over a round trip per record. A thousand
+  sequential mutations will not finish in time.
+- Where a loop is unavoidable, make it resumable and idempotent, and have it report what is left, so
+  running it again continues rather than restarting.
+- A 524 does not mean the work was rolled back. Whatever the function had already committed is
+  committed. Check the state before re-running.
+
 ## Logic functions and SERVER_URL
 
 **If the CRM works but a logic function returns 500 with `ROUTE_TRIGGER_USER_UNCAUGHT_ERROR` and
