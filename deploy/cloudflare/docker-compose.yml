@@ -1,0 +1,17 @@
+# A second, independent tunnel for the CRM. Token-based, so it carries its own
+# configuration and shares nothing with any cloudflared already on the NAS.
+#
+# EDIT ONE LINE: the token from Zero Trust, Networks, Tunnels.
+
+name: cloudflared-crm
+
+services:
+  cloudflared-crm:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-crm
+    # CHANGE ME
+    command: tunnel --no-autoupdate run --token PASTE_TUNNEL_TOKEN_HERE
+    # Not optional on UGOS: the Docker bridge cannot reach the host, so a
+    # bridged connector cannot see the port Twenty publishes on localhost.
+    network_mode: host
+    restart: unless-stopped
