@@ -44,13 +44,17 @@ const PRACTICE_AREAS = [
   { name: 'Notarization', billingEntity: 'Pattaya Notary' },
 ];
 
-const relabelStandardObjects = async (): Promise<string[]> => {
+const relabelStandardObjects = async (): Promise<{
+  relabelled: string[];
+  errors: string[];
+}> => {
   const client = new MetadataApiClient();
   const relabelled: string[] = [];
+  const errors: string[] = [];
 
   for (const relabel of RELABELS) {
-    // A failure here must not fail the install: a wrong label is cosmetic,
-    // a blocked install is not.
+    // A failure here must not fail the install, but it must be reported: a
+    // silently swallowed one looks exactly like a relabel that did not apply.
     try {
       const found = (await client.query({
         objects: {
@@ -67,6 +71,7 @@ const relabelStandardObjects = async (): Promise<string[]> => {
       const id = found.objects?.edges?.[0]?.node?.id;
 
       if (id === undefined) {
+        errors.push(`${relabel.labelPlural}: object not found`);
         continue;
       }
 
@@ -89,12 +94,14 @@ const relabelStandardObjects = async (): Promise<string[]> => {
       });
 
       relabelled.push(relabel.labelPlural);
-    } catch {
-      continue;
+    } catch (caught) {
+      errors.push(
+        `${relabel.labelPlural}: ${caught instanceof Error ? caught.message : String(caught)}`,
+      );
     }
   }
 
-  return relabelled;
+  return { relabelled, errors };
 };
 
 const seedFirmStructure = async (): Promise<{
@@ -179,15 +186,16 @@ const seedFirmStructure = async (): Promise<{
 };
 
 const handler = async () => {
-  const relabelled = await relabelStandardObjects();
+  const { relabelled, errors } = await relabelStandardObjects();
 
   try {
     const seeded = await seedFirmStructure();
 
-    return { relabelled, ...seeded };
+    return { relabelled, relabelErrors: errors, ...seeded };
   } catch (caught) {
     return {
       relabelled,
+      relabelErrors: errors,
       seedError: caught instanceof Error ? caught.message : String(caught),
     };
   }
