@@ -254,7 +254,9 @@ const applyFieldPlacements = async (): Promise<{
     const viewId = viewIdByUniversalIdentifier.get(viewUniversalIdentifier);
 
     if (viewId === undefined) {
-      placementErrors.push(`View not found: ${viewUniversalIdentifier}`);
+      placementErrors.push(
+        `View not found: ${JSON.stringify(viewUniversalIdentifier)}`,
+      );
       continue;
     }
 
@@ -342,7 +344,19 @@ const applyFieldPlacements = async (): Promise<{
     }
   }
 
-  return { moved, placementErrors };
+  return {
+    moved,
+    placementErrors,
+    // One run has to be enough to tell whether the expected identifiers are
+    // wrong or the view list is.
+    diagnostics: {
+      expectedViews: viewUniversalIdentifiers,
+      viewsReturned: viewIdByUniversalIdentifier.size,
+      sampleViewUniversalIdentifiers: [
+        ...viewIdByUniversalIdentifier.keys(),
+      ].slice(0, 8),
+    },
+  };
 };
 
 const handler = async () => {
@@ -357,7 +371,7 @@ const handler = async () => {
     seedError = caught instanceof Error ? caught.message : String(caught);
   }
 
-  const { moved, placementErrors } = await applyFieldPlacements();
+  const { moved, placementErrors, diagnostics } = await applyFieldPlacements();
 
   return {
     relabelled,
@@ -366,6 +380,7 @@ const handler = async () => {
     ...(seedError !== undefined ? { seedError } : {}),
     fieldsMoved: moved,
     placementErrors,
+    diagnostics,
   };
 };
 
