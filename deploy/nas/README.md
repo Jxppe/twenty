@@ -102,6 +102,73 @@ NAS hypervisor, which needs virtualization extensions passed through to the gues
 machine managers do not expose them, and Docker Desktop then refuses to start outright. Run it on
 the NAS host.
 
+### Upgrading it
+
+The image upgrades itself. Its startup script runs `yarn command:prod upgrade` on every boot:
+
+`packages/twenty-docker/twenty-app-dev/rootfs/etc/s6-overlay/scripts/init-db.sh`
+
+So an upgrade is: pull the new image, recreate the container on the same two volumes, watch the
+log. The data is in the volumes, not the container, and nothing is re-seeded because the script
+checks for the dev workspace before seeding.
+
+**Take a dump first.** Migrations run on start and do not reverse.
+
+```bash
+sudo docker exec twenty-app-dev sh -c \
+  "PGPASSWORD=twenty pg_dump -h localhost -U twenty -d default" \
+  > ~/tll-crm-$(date +%F).sql
+```
+
+Inside the container Postgres is `twenty` / `twenty` on database `default`, listening on localhost
+only. That is fixed by the image, not configurable.
+
+Then, if the container was created with `docker run`:
+
+```bash
+sudo docker pull twentycrm/twenty-app-dev:latest
+sudo docker rm -f twenty-app-dev
+# re-issue the same docker run, same SERVER_URL, same volume names
+sudo docker logs -f twenty-app-dev
+```
+
+`SERVER_URL` is baked in at creation time, so it has to be supplied again. Getting it wrong here
+signs you out and breaks logic functions, so read it off the old container before removing it:
+
+```bash
+sudo docker inspect twenty-app-dev --format '{{range .Config.Env}}{{println .}}{{end}}'
+```
+
+If it was deployed as a UGOS Project instead, the Project's Update button does the pull and
+recreate, and the compose file keeps `SERVER_URL`. Confirm which you have with:
+
+```bash
+sudo docker inspect twenty-app-dev --format '{{index .Config.Labels "com.docker.compose.project"}}'
+```
+
+A project name means compose; empty means `docker run`.
+
+**Watch for `==> START Running upgrade`** in the log. On a version that changes workspace metadata
+it takes a few minutes and the UI is unusable until it finishes. `Warning: Upgrade completed with
+errors` is not fatal by itself, but it means a workspace did not fully migrate, and the lines above
+it say which.
+
+The version the server reports afterwards. `/healthz` only says `{"status":"ok"}`, so ask the
+public discovery endpoint instead, which carries `APP_VERSION` verbatim
+(`well-known.controller.ts`):
+
+```bash
+curl -s https://crm.tllcrm.fyi/.well-known/mcp/server-card.json
+```
+
+The `version` field in the reply is the server's version. No authentication needed, so this works
+from any machine that can reach the CRM.
+
+**Keep the server and the CLI on the same minor version.** The SDK writes metadata against the
+schema it was built for, and the failures when they diverge are unhelpful: `Cannot query field
+"isCustom"` was one of ours. `apps/tll-crm/package.json` pins `twenty-sdk`, so the server is the
+side that moves.
+
 ### When to move off it
 
 This is the development image. It is fine for evaluating, for demo data, and for the first few
