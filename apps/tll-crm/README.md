@@ -12,62 +12,41 @@ Read [`/docs/JOBS.md`](../../docs/JOBS.md) before changing the domain.
 
 ## Starting a session
 
-**One terminal:**
+Nothing. There is no session to start.
+
+Every push to the branch deploys itself: `.github/workflows/deploy-tll-crm.yaml` installs, applies the
+metadata to the CRM and runs the install hook. Open the CRM and the change is there. Watch the run
+under the repository's Actions tab if something looks wrong.
+
+**One-time setup.** Two repository secrets, under Settings, Secrets and variables, Actions:
+
+| Secret | Value |
+| --- | --- |
+| `TLL_CRM_URL` | `https://crm.tllcrm.fyi` |
+| `TLL_CRM_API_KEY` | Create one in the CRM: Settings, APIs |
+
+The key never goes in the repository. It is read from the secret at run time and nothing prints it.
+
+**If Cloudflare Access sits in front of the CRM**, GitHub's runners will be blocked by it, since they
+have no browser to log in with. Either leave `/rest` and `/graphql` outside Access, or issue an Access
+service token. The deploy failing at "Point the CLI at the CRM" with an authentication error is what
+that looks like.
+
+**A deploy will not delete anything on its own.** If a change would drop a field or an object, the
+run fails and waits for a person, rather than taking the data with it. That is deliberate: the
+alternative is a silent data loss two commits after nobody was watching.
+
+## Running it from this machine instead
+
+Only needed if CI cannot reach the CRM, or you want a change applied without pushing.
 
 ```
 cd C:\Users\jespe\Documents\GitHub\twenty\apps\tll-crm
 sync
 ```
 
-That is the whole loop. It watches the branch, and when a commit lands it pulls, applies the metadata
-to the CRM, and runs the install hook. Errors print and it retries on the next commit. Nothing to
-type between changes.
-
-`dev` and `pull` still exist and are what you want if you are editing files on this machine, since
-`dev` watches the filesystem. Changes arrive here by git, so `sync` is the loop that fits.
-
-One thing it does not do: apply destructive metadata changes without asking. If a sync would delete a
-field or an object it stops and says so, rather than silently dropping the data with it.
-
-## Starting a session (the old two-terminal way)
-
-Everything below runs **on the development PC**, in Command Prompt. Nothing runs on the NAS.
-
-**Two terminals.** One holds the watcher and stays open all day. The other is for everything else.
-
-### Terminal 1: the watcher
-
-```
-cd C:\Users\jespe\Documents\GitHub\twenty\apps\tll-crm
-dev
-```
-
-Leave it. It rebuilds and re-syncs every time a file is saved, including files that arrive from a
-`git pull` in the other window. There is nothing to re-run after an edit.
-
-### Terminal 2: everything else
-
-```
-cd C:\Users\jespe\Documents\GitHub\twenty\apps\tll-crm
-pull
-```
-
-`pull` watches the branch and pulls when something lands, so you never type `git pull`. Terminal 1
-picks up whatever arrives. Ctrl-C when you want the terminal back for a one-off command.
-
-Prefer doing it by hand? `git pull` from the repository root does the same thing.
-
-### First run on a machine, or after the config is lost
-
-```
-twenty remote:add --url https://crm.tllcrm.fyi --as crm --api-key <key>
-twenty remote:use crm
-```
-
-Get the key from the CRM: Settings, APIs, create one. Use a key rather than the browser sign-in and
-the CLI stops asking you to re-authenticate mid-session.
-
-Once done it is remembered. `twenty remote:list` shows what is configured.
+Watches the branch and does the same three steps locally. `dev` and `pull` are still there for
+editing files on this machine, where a filesystem watcher is the right tool.
 
 ## After a reboot
 

@@ -1,0 +1,68 @@
+# Deploys the app to the CRM whenever something lands on the branch.
+#
+# The point is that no machine of ours is in the loop: no watcher to leave
+# running, no pull, no command per change. Push and it is live.
+#
+# Needs two repository secrets:
+#   TLL_CRM_URL      https://crm.tllcrm.fyi
+#   TLL_CRM_API_KEY  Settings, APIs, create one in the CRM
+name: Deploy TLL CRM
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+    paths:
+      - 'apps/tll-crm/**'
+      - '.github/workflows/deploy-tll-crm.yaml'
+  workflow_dispatch:
+
+# Never two deploys at once: the metadata sync is not safe to interleave.
+concurrency:
+  group: deploy-tll-crm
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/tll-crm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the secrets exist
+        env:
+          URL: ${{ secrets.TLL_CRM_URL }}
+          KEY: ${{ secrets.TLL_CRM_API_KEY }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then
+            echo "TLL_CRM_URL and TLL_CRM_API_KEY must be set as repository secrets."
+            echo "Settings, Secrets and variables, Actions, New repository secret."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: yarn
+          cache-dependency-path: apps/tll-crm/yarn.lock
+
+      - run: yarn install --immutable
+
+      - name: Point the CLI at the CRM
+        env:
+          URL: ${{ secrets.TLL_CRM_URL }}
+          KEY: ${{ secrets.TLL_CRM_API_KEY }}
+        run: |
+          yarn twenty remote:add --url "$URL" --as ci --api-key "$KEY"
+          yarn twenty remote:use ci
+
+      # No --force. A deploy that would drop a field or an object should fail
+      # loudly and wait for a person, not take the data with it.
+      - name: Apply metadata
+        run: yarn twenty apply
+
+      - name: Run the install hook
+        run: yarn twenty dev:function:exec --postInstall
