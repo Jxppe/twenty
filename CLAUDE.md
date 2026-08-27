@@ -93,6 +93,9 @@ channels, payment methods, accounting providers. Not for CRUD.
 - Twenty derives record-page view field identifiers from `(view, field, owning application)`. Never
   invent one: reposition by declaring the derived identifier, or the sync rejects every field with
   `View field with same fieldMetadataUniversalIdentifier and viewUniversalIdentifier already exists`.
+  But never declare one in the same sync that creates its field: the engine is creating that same
+  view field itself, both creates collide with `RESERVED_SYSTEM_UNIVERSAL_IDENTIFIER`, and the atomic
+  plan then fails forever. Field first, placement in a later sync.
 - `theme.spacing` is a token record: `theme.spacing[2]`, not `theme.spacing(2)`.
 - Import enums from `twenty-sdk/define`, not `twenty-shared/types`.
 - `navigate()` takes an `AppPath` enum member with named params, not a URL.

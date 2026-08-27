@@ -84,6 +84,16 @@ All of this, declared as TypeScript and synced with the CLI. Verified against
   `STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.<object>.views.<view>.viewFields.<name>` for Twenty's.
   `position`, `isVisible` and `viewFieldGroupId` are the editable properties
   (`flat-view-field-editable-properties.constant.ts`).
+- **Never declare a view field in the same sync that creates its field.** MEASURED, and it is the
+  trap the rule above walks you into. Creating a field fires
+  `fieldRecordPageViewFieldOnCreate` and `fieldIndexViewFieldOnCreate`, which create exactly the view
+  fields whose derived identifiers you were told to reuse. The engine's create and yours then collide
+  and every one fails with `RESERVED_SYSTEM_UNIVERSAL_IDENTIFIER: Universal identifier is reserved
+  for system-managed metadata` (`metadata-side-effect-engine.service.ts:301`). The plan is atomic, so
+  the field is never created either and no amount of re-syncing converges. Ship the field first, let
+  the engine place it, then reposition in a **later** sync, where the row exists and your declaration
+  is an update. Repositioning a field that already exists is safe because the create handler only
+  fires on create.
 - **An app cannot reposition a view field another application owns.** MEASURED: declaring the derived
   identifier for Twenty's own `stage`, `amount`, `closeDate`, `company`, `pointOfContact` and `owner`
   on the Opportunity record page failed with `ENTITY_ALREADY_EXISTS: Cannot create viewField:
