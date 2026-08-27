@@ -84,6 +84,13 @@ All of this, declared as TypeScript and synced with the CLI. Verified against
   `STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.<object>.views.<view>.viewFields.<name>` for Twenty's.
   `position`, `isVisible` and `viewFieldGroupId` are the editable properties
   (`flat-view-field-editable-properties.constant.ts`).
+- **Do not declare view field placement in the manifest at all; apply it from the install hook.**
+  `defineViewField` for a field your own app creates cannot work on a fresh install, for the reason
+  below, and an app that only works on a workspace where the fields already exist is not installable.
+  Use `getViews` and `getViewFields` to find the row by its derived universal identifier, then
+  `updateViewField({ id, update: { position, isVisible, viewFieldGroupId } })`. View field **groups**
+  carry no universal identifier, so match those by `name`. The hook runs after the sync, so the rows
+  exist and every write is an update. See `setup-firm.ts`.
 - **Never declare a view field in the same sync that creates its field.** MEASURED, and it is the
   trap the rule above walks you into. Creating a field fires
   `fieldRecordPageViewFieldOnCreate` and `fieldIndexViewFieldOnCreate`, which create exactly the view

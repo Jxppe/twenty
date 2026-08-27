@@ -6,6 +6,33 @@ Each entry says what was decided, why, what would reverse it, and what was verif
 
 ---
 
+## D14 — Field placement is applied on install, not declared in the manifest
+
+**Decided.** No `defineViewField` files. `setup-firm.ts` reads `FIELD_PLACEMENTS` and applies each
+one through `updateViewField` after the sync.
+
+**Why the declarative version cannot work.** Creating a field makes Twenty create its view fields
+too, deriving their identifiers from `(view, field, owning application)`. A declaration has to reuse
+that derivation to be an update rather than a duplicate. So on a fresh install both creates land in
+one plan, collide with `RESERVED_SYSTEM_UNIVERSAL_IDENTIFIER`, and because the plan is atomic the
+field is never created either and re-syncing never converges.
+
+This was not theoretical: the seven Job placement files worked only because those fields already
+existed here from an earlier sync. **The app could not have been installed on a new workspace**, and
+that would have surfaced when setting up the real one.
+
+**What the hook does.** Matches the view field by the identifier it derives the same way the engine
+does, matches groups by `name` because they carry no universal identifier, skips anything already in
+position, and skips fields that do not exist rather than failing the install.
+
+**Cost.** Placement no longer travels with a `dev` sync: it needs
+`twenty dev:function:exec --postInstall`, the same nudge relabels already need.
+
+**What would reverse it.** Twenty deferring to a caller-provided view field instead of emitting its
+own. The side-effect handler documents the opposite as deliberate.
+
+---
+
 ## D13 — The app soft-deletes, it never destroys
 
 **Decided.** `src/default-role.ts` keeps `canDestroyAllObjectRecords: false`. Nothing this app runs

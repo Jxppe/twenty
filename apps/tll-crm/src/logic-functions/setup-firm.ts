@@ -2,6 +2,7 @@ import { CoreApiClient } from 'twenty-client-sdk/core';
 import { MetadataApiClient } from 'twenty-client-sdk/metadata';
 import { definePostInstallLogicFunction } from 'twenty-sdk/define';
 
+import { FIELD_PLACEMENTS } from 'src/constants/field-placements';
 import { RELABEL_STANDARD_OBJECTS_FUNCTION_UNIVERSAL_IDENTIFIER } from 'src/constants/universal-identifiers';
 
 // Relabel, never rename: nameSingular is the API contract, so renaming
@@ -210,20 +211,162 @@ const seedFirmStructure = async (): Promise<{
   return { billingEntities: createdEntities, practiceAreas: createdAreas };
 };
 
+type ViewRow = { id?: string; universalIdentifier?: string };
+type ViewFieldRow = {
+  id?: string;
+  universalIdentifier?: string;
+  position?: number;
+  isVisible?: boolean;
+  viewFieldGroupId?: string | null;
+};
+type ViewFieldGroupRow = { id?: string; name?: string };
+
+// Placement cannot be declared in the manifest. Creating a field makes the
+// engine create its view field too, at the identifier a declaration would have
+// to reuse, and the two creates collide (RESERVED_SYSTEM_UNIVERSAL_IDENTIFIER)
+// in an atomic plan that then never converges. Applying it here instead runs
+// after the sync, when the rows exist and this is an update.
+const applyFieldPlacements = async (): Promise<{
+  moved: number;
+  placementErrors: string[];
+}> => {
+  const client = new MetadataApiClient();
+  const placementErrors: string[] = [];
+  let moved = 0;
+
+  const viewsResult = (await client.query({
+    getViews: { id: true, universalIdentifier: true },
+  })) as { getViews?: ViewRow[] };
+
+  const viewIdByUniversalIdentifier = new Map<string, string>();
+
+  for (const view of viewsResult.getViews ?? []) {
+    if (view.universalIdentifier !== undefined && view.id !== undefined) {
+      viewIdByUniversalIdentifier.set(view.universalIdentifier, view.id);
+    }
+  }
+
+  const viewUniversalIdentifiers = [
+    ...new Set(FIELD_PLACEMENTS.map((placement) => placement.viewUniversalIdentifier)),
+  ];
+
+  for (const viewUniversalIdentifier of viewUniversalIdentifiers) {
+    const viewId = viewIdByUniversalIdentifier.get(viewUniversalIdentifier);
+
+    if (viewId === undefined) {
+      placementErrors.push(`View not found: ${viewUniversalIdentifier}`);
+      continue;
+    }
+
+    const fieldsResult = (await client.query({
+      getViewFields: {
+        __args: { viewId },
+        id: true,
+        universalIdentifier: true,
+        position: true,
+        isVisible: true,
+        viewFieldGroupId: true,
+      },
+    })) as { getViewFields?: ViewFieldRow[] };
+
+    const viewFieldByUniversalIdentifier = new Map<string, ViewFieldRow>();
+
+    for (const viewField of fieldsResult.getViewFields ?? []) {
+      if (viewField.universalIdentifier !== undefined) {
+        viewFieldByUniversalIdentifier.set(viewField.universalIdentifier, viewField);
+      }
+    }
+
+    // Groups carry no universal identifier, so they are matched by name.
+    const groupsResult = (await client.query({
+      getViewFieldGroups: { __args: { viewId }, id: true, name: true },
+    })) as { getViewFieldGroups?: ViewFieldGroupRow[] };
+
+    const groupIdByName = new Map<string, string>();
+
+    for (const group of groupsResult.getViewFieldGroups ?? []) {
+      if (group.name !== undefined && group.id !== undefined) {
+        groupIdByName.set(group.name, group.id);
+      }
+    }
+
+    for (const placement of FIELD_PLACEMENTS.filter(
+      (candidate) => candidate.viewUniversalIdentifier === viewUniversalIdentifier,
+    )) {
+      const viewField = viewFieldByUniversalIdentifier.get(
+        placement.viewFieldUniversalIdentifier,
+      );
+
+      if (viewField?.id === undefined) {
+        // The field may simply not exist yet on this workspace, which is not an
+        // error worth failing an install over.
+        continue;
+      }
+
+      const viewFieldGroupId =
+        placement.groupName !== undefined
+          ? (groupIdByName.get(placement.groupName) ?? null)
+          : null;
+
+      const isAlreadyPlaced =
+        viewField.position === placement.position &&
+        viewField.isVisible === true &&
+        (viewField.viewFieldGroupId ?? null) === viewFieldGroupId;
+
+      if (isAlreadyPlaced) {
+        continue;
+      }
+
+      try {
+        await client.mutation({
+          updateViewField: {
+            __args: {
+              input: {
+                id: viewField.id,
+                update: {
+                  position: placement.position,
+                  isVisible: true,
+                  viewFieldGroupId,
+                },
+              },
+            },
+            id: true,
+          },
+        });
+        moved += 1;
+      } catch (caught) {
+        placementErrors.push(
+          `${placement.viewFieldUniversalIdentifier}: ${caught instanceof Error ? caught.message : String(caught)}`,
+        );
+      }
+    }
+  }
+
+  return { moved, placementErrors };
+};
+
 const handler = async () => {
   const { relabelled, errors } = await relabelStandardObjects();
 
-  try {
-    const seeded = await seedFirmStructure();
+  let seeded;
+  let seedError;
 
-    return { relabelled, relabelErrors: errors, ...seeded };
+  try {
+    seeded = await seedFirmStructure();
   } catch (caught) {
-    return {
-      relabelled,
-      relabelErrors: errors,
-      seedError: caught instanceof Error ? caught.message : String(caught),
-    };
+    seedError = caught instanceof Error ? caught.message : String(caught);
   }
+
+  const { moved, placementErrors } = await applyFieldPlacements();
+
+  return {
+    relabelled,
+    relabelErrors: errors,
+    ...(seeded ?? {}),
+    ...(seedError !== undefined ? { seedError } : {}),
+    fieldsMoved: moved,
+    placementErrors,
+  };
 };
 
 export default definePostInstallLogicFunction({
