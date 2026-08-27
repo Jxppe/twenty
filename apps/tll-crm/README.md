@@ -81,6 +81,24 @@ Both containers restart with the NAS, so a failure here is usually the NAS itsel
 `twenty` and `dev` are scripts in this folder that call the CLI's node bundle directly, so they work
 whether or not yarn is healthy on the machine.
 
+## The watcher dies after a few hours
+
+MEASURED: `FATAL ERROR: Ineffective mark-compacts near heap limit` after about two and a quarter
+hours of uptime, at Node's default ~4GB cap. The leak is somewhere in the SDK's long-running dev
+process, not in this app. The two candidates worth checking are already handled upstream: the event
+buffer is capped (`dev-mode-orchestrator-state.ts:236`) and esbuild contexts are disposed on restart
+(`esbuild-watcher.ts:90`).
+
+`dev` now does two things about it. It raises the heap cap to 8GB, which buys hours rather than
+fixing anything, and it relaunches itself when it dies. That matters more than it sounds: a dead
+watcher and a live one look identical in a terminal you are not watching, and the failure shows up as
+"my changes stopped appearing" twenty minutes later.
+
+Ctrl-C twice to stop it for real. Once only kills the current run and the loop restarts it.
+
+Nothing is lost in a restart. The watcher empties its output directory and rebuilds from the working
+tree every time it starts.
+
 ## Install hooks need a nudge
 
 `dev` syncs metadata and nothing else, so the post-install hook that relabels the standard objects
