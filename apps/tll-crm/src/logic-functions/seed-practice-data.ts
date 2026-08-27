@@ -101,6 +101,11 @@ const CLIENTS: SeedClient[] = [
   },
 ];
 
+// Twenty's seeded "create a company on new person" workflow will override every
+// companyId here with one derived from the email domain, and mint the
+// organization to go with it. Turn that workflow off before seeding; see the
+// README. It fires on create only, so corrections afterwards hold.
+
 // One job per shape worth seeing: overdue, due today, waiting on the client,
 // finished, and one that has barely started.
 const JOBS: SeedJob[] = [

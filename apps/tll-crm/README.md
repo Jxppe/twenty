@@ -81,6 +81,26 @@ Both containers restart with the NAS, so a failure here is usually the NAS itsel
 `twenty` and `dev` are scripts in this folder that call the CLI's node bundle directly, so they work
 whether or not yarn is healthy on the machine.
 
+## Turn off Twenty's "create a company" workflow
+
+A workspace seeded from Twenty's dev data carries a **workflow that creates an organization every
+time a person is created**, named after the domain of their email address. MEASURED on this
+workspace: seeding six clients produced four junk organizations (`example.co.th`, `example.de`,
+`example.se`, `example.co.uk`) and attached every client to the domain-derived one, overriding the
+organization each was explicitly given.
+
+For this firm that is actively wrong. Most clients are individuals, so it would mint an organization
+called `gmail.com` and file half the client base under it.
+
+Turn it off under **Workflows** in the sidebar before entering real clients. It is workspace data
+rather than code, so nothing in this repository disables it and it survives every sync.
+
+Two details worth knowing if you meet the damage rather than prevent it:
+
+- It fires on **create only**. Correcting a person's organization afterwards sticks.
+- Deleting the junk organization clears the link, so the fix is: correct the ones that should point
+  somewhere, then delete the domain-named organizations.
+
 ## The watcher dies after a few hours
 
 MEASURED: `FATAL ERROR: Ineffective mark-compacts near heap limit` after about two and a quarter
