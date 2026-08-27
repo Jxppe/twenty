@@ -56,6 +56,107 @@ const PRACTICE_AREAS = [
   { name: 'Notarization', billingEntity: 'Pattaya Notary' },
 ];
 
+// The firm files by client, so "Point of Contact" is both jargon (D12) and the
+// wrong emphasis: the client is the record, not a contact attached to a deal.
+// Field labels are editable on standard fields; names are not.
+const FIELD_RELABELS = [
+  { objectNameSingular: 'opportunity', fieldName: 'pointOfContact', label: 'Client', icon: 'IconUser' },
+  { objectNameSingular: 'opportunity', fieldName: 'company', label: 'Organization', icon: 'IconBuilding' },
+  { objectNameSingular: 'person', fieldName: 'pointOfContactForOpportunities', label: 'Jobs', icon: 'IconBriefcase' },
+  { objectNameSingular: 'company', fieldName: 'opportunities', label: 'Jobs', icon: 'IconBriefcase' },
+];
+
+const relabelStandardFields = async (): Promise<{
+  fieldsRelabelled: string[];
+  fieldRelabelErrors: string[];
+}> => {
+  const client = new MetadataApiClient();
+  const fieldsRelabelled: string[] = [];
+  const fieldRelabelErrors: string[] = [];
+
+  const found = (await client.query({
+    objects: {
+      __args: { paging: { first: 200 }, filter: {} },
+      edges: {
+        node: {
+          nameSingular: true,
+          fields: {
+            __args: { paging: { first: 200 }, filter: {} },
+            edges: { node: { id: true, name: true, label: true } },
+          },
+        },
+      },
+    },
+  })) as {
+    objects?: {
+      edges?: {
+        node?: {
+          nameSingular?: string;
+          fields?: { edges?: { node?: { id?: string; name?: string; label?: string } }[] };
+        };
+      }[];
+    };
+  };
+
+  const fieldsByObject = new Map<string, Map<string, { id: string; label: string }>>();
+
+  for (const edge of found.objects?.edges ?? []) {
+    if (edge.node?.nameSingular === undefined) {
+      continue;
+    }
+
+    const byName = new Map<string, { id: string; label: string }>();
+
+    for (const fieldEdge of edge.node.fields?.edges ?? []) {
+      if (fieldEdge.node?.name !== undefined && fieldEdge.node.id !== undefined) {
+        byName.set(fieldEdge.node.name, {
+          id: fieldEdge.node.id,
+          label: fieldEdge.node.label ?? '',
+        });
+      }
+    }
+
+    fieldsByObject.set(edge.node.nameSingular, byName);
+  }
+
+  for (const relabel of FIELD_RELABELS) {
+    const target = fieldsByObject
+      .get(relabel.objectNameSingular)
+      ?.get(relabel.fieldName);
+
+    if (target === undefined) {
+      fieldRelabelErrors.push(
+        `${relabel.objectNameSingular}.${relabel.fieldName}: not found`,
+      );
+      continue;
+    }
+
+    if (target.label === relabel.label) {
+      continue;
+    }
+
+    try {
+      await client.mutation({
+        updateOneField: {
+          __args: {
+            input: { id: target.id, update: { label: relabel.label, icon: relabel.icon } },
+          },
+          id: true,
+        },
+      });
+      fieldsRelabelled.push(
+        `${relabel.objectNameSingular}.${relabel.fieldName} -> ${relabel.label}`,
+      );
+    } catch (caught) {
+      fieldRelabelErrors.push(
+        `${relabel.objectNameSingular}.${relabel.fieldName}: ${caught instanceof Error ? caught.message : String(caught)}`,
+      );
+    }
+  }
+
+  return { fieldsRelabelled, fieldRelabelErrors };
+};
+
 const relabelStandardObjects = async (): Promise<{
   relabelled: string[];
   errors: string[];
@@ -442,6 +543,7 @@ const applyFieldPlacements = async (): Promise<{
 
 const handler = async () => {
   const { relabelled, errors } = await relabelStandardObjects();
+  const { fieldsRelabelled, fieldRelabelErrors } = await relabelStandardFields();
 
   let seeded;
   let seedError;
@@ -457,6 +559,8 @@ const handler = async () => {
   return {
     relabelled,
     relabelErrors: errors,
+    fieldsRelabelled,
+    fieldRelabelErrors,
     ...(seeded ?? {}),
     ...(seedError !== undefined ? { seedError } : {}),
     fieldsMoved: moved,

@@ -71,6 +71,22 @@ work log's relation is `matter`, labelled Job.
 
 
 
+### The client is the spine, not the job
+
+The firm files by **client, then date**: that is how documents, scans and folders are already
+organised on the server, and it is how people ask questions ("what is happening with Khun Somchai?"
+rather than "what is happening with job 41?").
+
+So the client leads. Twenty's `pointOfContact` is relabelled **Client** and sits immediately after
+the job name on the Open jobs list, and a client's own page lists their **Jobs**. `company` is
+relabelled **Organization** and stays optional, because it is the exception rather than the rule:
+MEASURED on the seeded data, every job has a client and only half have an organization.
+
+**Not one polymorphic "client" field.** A morph relation pointing at either a person or an
+organization would model "the client is sometimes a company", but the data says otherwise: there is
+always a person, and the organization is context about them. Two fields where one is optional is the
+honest shape, and it keeps a client's whole history on one record.
+
 ### Job
 
 Start by **relabelling `Opportunity`** (D6), not by building a new object. That inherits pipelines,
