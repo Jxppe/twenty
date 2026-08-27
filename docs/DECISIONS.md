@@ -124,6 +124,10 @@ Twenty's.
 **Writing any of this needs the `DATA_MODEL` permission flag** on the app's role. Record permissions
 do not cover object metadata.
 
+**And find the object by `nameSingular`, not by filtering on `universalIdentifier`.** MEASURED: that
+filter is ignored and returns the first record, so a lookup for Opportunity relabelled Dashboard and
+reported success.
+
 **Reverses if:** an upgrade starts overwriting label overrides on standard objects. Watch for it.
 
 ---
