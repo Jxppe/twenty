@@ -4,17 +4,17 @@ import {
 } from 'twenty-sdk/define';
 
 import {
-  JOB_STAGE_VIEW_FIELD_UNIVERSAL_IDENTIFIER,
-} from 'src/constants/universal-identifiers';
+  JOB_RECORD_PAGE_GROUPS,
+  JOB_RECORD_PAGE_STANDARD_VIEW_FIELDS,
+  JOB_RECORD_PAGE_VIEW_UNIVERSAL_IDENTIFIER,
+} from 'src/constants/job-record-page';
 
 export default defineViewField({
-  universalIdentifier: JOB_STAGE_VIEW_FIELD_UNIVERSAL_IDENTIFIER,
-  viewUniversalIdentifier:
-    STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.opportunity.views.opportunityRecordPageFields.universalIdentifier,
-  fieldMetadataUniversalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.opportunity.fields.stage.universalIdentifier,
-  viewFieldGroupUniversalIdentifier:
-    STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.opportunity.views.opportunityRecordPageFields.viewFieldGroups.deal
-      .universalIdentifier,
+  universalIdentifier: JOB_RECORD_PAGE_STANDARD_VIEW_FIELDS.stage.universalIdentifier,
+  viewUniversalIdentifier: JOB_RECORD_PAGE_VIEW_UNIVERSAL_IDENTIFIER,
+  fieldMetadataUniversalIdentifier:
+    STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.opportunity.fields.stage.universalIdentifier,
+  viewFieldGroupUniversalIdentifier: JOB_RECORD_PAGE_GROUPS.deal.universalIdentifier,
   position: 0,
   isVisible: true,
 });
