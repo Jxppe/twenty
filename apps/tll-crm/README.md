@@ -10,33 +10,78 @@ deliberate: see [`/docs/DECISIONS.md`](../../docs/DECISIONS.md) D1.
 
 Read [`/docs/MATTERS.md`](../../docs/MATTERS.md) before changing the domain.
 
-## Daily loop
+## Starting a session
+
+Everything below runs **on the development PC**, in Command Prompt. Nothing runs on the NAS.
+
+**Two terminals.** One holds the watcher and stays open all day. The other is for everything else.
+
+### Terminal 1: the watcher
 
 ```
-twenty remote:use nas     once, picks which instance you are working against
-dev                       leave it running: save a file, it syncs
+cd C:\Users\jespe\Documents\GitHub\twenty\apps\tll-crm
+dev
 ```
 
-`dev` is a **watcher**, not a one-shot. Start it and leave it. Editing a file
-and saving re-syncs the app on its own; there is nothing to re-run.
+Leave it. It rebuilds and re-syncs every time a file is saved, including files that arrive from a
+`git pull` in the other window. There is nothing to re-run after an edit.
 
-`dev.cmd` and `twenty.cmd` call the CLI's node bundle directly, so they work
-whether or not yarn is healthy on the machine. `./twenty.sh` is the same thing
-for a shell.
-
-### Authenticate with an API key, not OAuth
-
-OAuth tokens expire and force a browser round-trip mid-session. An API key does
-not. Create one in the workspace under Settings, APIs, then:
+### Terminal 2: everything else
 
 ```
-twenty remote:add --url http://<host>:2020 --as nas --api-key <key>
+cd C:\Users\jespe\Documents\GitHub\twenty
+git pull
+cd apps\tll-crm
 ```
 
-### Install hooks need a nudge
+Stay in that folder. `git pull` here whenever changes land; terminal 1 picks them up on its own.
+
+### First run on a machine, or after the config is lost
+
+```
+twenty remote:add --url https://crm.tllcrm.fyi --as crm --api-key <key>
+twenty remote:use crm
+```
+
+Get the key from the CRM: Settings, APIs, create one. Use a key rather than the browser sign-in and
+the CLI stops asking you to re-authenticate mid-session.
+
+Once done it is remembered. `twenty remote:list` shows what is configured.
+
+## After a reboot
+
+The NAS brings the CRM up by itself, so usually there is nothing to do: open
+`https://crm.tllcrm.fyi` and start the two terminals above.
+
+If it does not load:
+
+| Check | Command or place |
+| --- | --- |
+| Is the container running | UGOS Docker, Project `tll-crm` |
+| Is the tunnel healthy | Cloudflare Zero Trust, Networks, Tunnels |
+| What the server says | UGOS Docker, Container `twenty-app-dev`, Log |
+
+Both containers restart with the NAS, so a failure here is usually the NAS itself having been off.
+
+## Commands worth knowing
+
+| Command | When |
+| --- | --- |
+| `dev` | The watcher. Terminal 1, all day. |
+| `twenty plan` | See what a sync would change, without changing it |
+| `twenty apply` | Sync once and exit, instead of watching |
+| `twenty dev:function:exec --postInstall` | Run the install hook by hand. `dev` does not run it |
+| `twenty dev:function:exec -n <name>` | Run one logic function and see its output |
+| `twenty dev:function:logs -n <name>` | Stream a function's logs |
+| `twenty remote:list` | Which instances are configured, and which is active |
+
+`twenty` and `dev` are scripts in this folder that call the CLI's node bundle directly, so they work
+whether or not yarn is healthy on the machine.
+
+## Install hooks need a nudge
 
 `dev` syncs metadata and nothing else, so the post-install hook that relabels the standard objects
-and seeds the billing entities does not fire on a sync. Run it when either is missing:
+and seeds the billing entities does not fire on a sync. Run it when either looks missing:
 
 ```
 twenty dev:function:exec --postInstall
@@ -44,11 +89,10 @@ twenty dev:function:exec --postInstall
 
 It reads before writing, so running it twice costs nothing.
 
-### What is still not instant
+## What is still not instant
 
-Objects and fields are database migrations, so a change to them is a real
-metadata sync, not a hot reload. Front component and logic function code is
-faster: the watcher rebuilds and pushes just that.
+Objects and fields are database migrations, so a change to them is a real metadata sync, not a hot
+reload. Front component and logic function code is faster: the watcher rebuilds and pushes just that.
 
 
 ## What it adds to a workspace
@@ -101,7 +145,11 @@ reused, styled from `useTheme()` so it matches the workspace theme.
 ## Developing
 
 The app is a standalone Yarn project, not part of Twenty's workspace. It needs a running Twenty
-instance to sync against, but not a built monorepo: the CLI runs one in Docker for you.
+instance to sync against, but not a built monorepo.
+
+The instance is normally the one on the NAS (`https://crm.tllcrm.fyi`). The CLI can also run one
+locally in Docker, which is useful for trying something destructive without touching the shared
+instance. See "Running" below.
 
 ### Windows: check out only this app
 
@@ -112,7 +160,7 @@ base path instead:
 ```sh
 git config --global core.longpaths true
 
-cd C:\ && mkdir dev && cd dev
+cd C:\Users\<you>\Documents\GitHub
 git clone --no-checkout --filter=blob:none https://github.com/Jxppe/twenty.git
 cd twenty
 git sparse-checkout init --cone
@@ -123,19 +171,23 @@ git checkout claude/twenty-crm-audit-h5qrnv
 The app's own longest path is 92 characters, so it fits comfortably. To take the full tree later,
 `git sparse-checkout disable` and enable `LongPathsEnabled` in the Windows registry first.
 
-### Running
+### Running against a local instance
+
+The day-to-day loop is at the top of this file and targets the NAS. This is the alternative: a
+throwaway Twenty on your own machine, for changes you would rather not try on the shared one.
 
 ```sh
 yarn install
-yarn twenty docker:start   # prebuilt Twenty on http://localhost:2020, CLI auto-authenticated
-yarn twenty dev            # watch and sync on every change
-yarn twenty plan           # show what a sync would change, without applying it
+twenty docker:start   # prebuilt Twenty on http://localhost:2020, CLI auto-authenticated
+twenty remote:use local
+dev
 ```
 
-Demo login is `tim@apple.dev` / `tim@apple.dev`; `yarn twenty docker:status` reprints it.
-`yarn twenty docker:reset` wipes the local data and starts clean.
+Demo login is `tim@apple.dev` / `tim@apple.dev`; `twenty docker:status` reprints it.
+`twenty docker:reset` wipes the local data and starts clean. `twenty remote:use crm` switches back.
 
-To target an existing instance instead, `yarn twenty remote:add --url <url>` and skip `docker:start`.
+It runs the all-in-one `twenty-app-dev` image, which keeps Postgres inside the container. Fine for
+scratch work, wrong for anything you want to keep.
 
 Checks:
 
@@ -146,8 +198,8 @@ yarn test:unit
 yarn twenty dev:build    # build the manifest without syncing
 ```
 
-`yarn twenty dev` never needs a version bump. `app:publish` / `app:install` do, and are the release
-path, not the dev loop.
+`dev` never needs a version bump. `app:publish` / `app:install` do, and are the release path, not the
+dev loop.
 
 ## Gotchas worth knowing before editing
 

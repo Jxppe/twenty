@@ -21,6 +21,11 @@ among them, and was closed by a maintainer: *"We're not open to adding more loca
 to improve quality for existing locales first."* So contributing upstream is not the escape hatch,
 and the patch is ours to carry indefinitely.
 
+**And there is nothing in it to reuse.** Fetched and counted at `pull/17225/head`: the front
+catalogue has 2,375 strings, the server 828, emails 44, and **every `msgstr` is empty**. The PR added
+locale plumbing and blank catalogue files, no Thai. `lingui extract` produces the same blanks in a
+minute, so the only thing that PR would have saved us is a line in a constants file.
+
 Three files, not one, all verified in the source:
 
 | File | What happens without it |
