@@ -7,7 +7,6 @@ type ObjectRow = {
   nameSingular?: string;
   labelSingular?: string;
   labelPlural?: string;
-  isCustom?: boolean;
 };
 
 // Read-only. The SDK's STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS are compiled into
@@ -20,11 +19,12 @@ const handler = async (): Promise<{ objects: string[] }> => {
     objects: {
       __args: { paging: { first: 200 }, filter: {} },
       edges: {
+        // Only fields that exist in both 2.34 and 2.35: the client SDK's schema
+        // is generated from the CLI's version, not the server's.
         node: {
           nameSingular: true,
           labelSingular: true,
           labelPlural: true,
-          isCustom: true,
         },
       },
     },
@@ -35,7 +35,7 @@ const handler = async (): Promise<{ objects: string[] }> => {
     .filter((node): node is ObjectRow => node !== undefined)
     .map(
       (node) =>
-        `${node.nameSingular} => ${node.labelSingular} / ${node.labelPlural}${node.isCustom === true ? ' (custom)' : ''}`,
+        `${node.nameSingular} => ${node.labelSingular} / ${node.labelPlural}`,
     )
     .sort();
 
