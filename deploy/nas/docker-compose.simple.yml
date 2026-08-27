@@ -7,7 +7,7 @@ name: tll-crm
 
 services:
   twenty:
-    image: twentycrm/twenty-app-dev:latest
+    image: twentycrm/twenty-app-dev:v2.35
     container_name: twenty-app-dev
     ports:
       - "2020:2020"

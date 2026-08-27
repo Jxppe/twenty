@@ -19,7 +19,7 @@ sudo docker run -d --name twenty-app-dev --restart unless-stopped \
   -e SERVER_URL=http://192.168.1.50:2020 \
   -v twenty-app-dev-data:/data/postgres \
   -v twenty-app-dev-storage:/app/packages/twenty-server/.local-storage \
-  twentycrm/twenty-app-dev:latest
+  twentycrm/twenty-app-dev:v2.35
 ```
 
 Through the UGOS Docker app: deploy `docker-compose.simple.yml` as a Project, after changing
@@ -126,7 +126,7 @@ only. That is fixed by the image, not configurable.
 Then, if the container was created with `docker run`:
 
 ```bash
-sudo docker pull twentycrm/twenty-app-dev:latest
+sudo docker pull twentycrm/twenty-app-dev:v2.35
 sudo docker rm -f twenty-app-dev
 # re-issue the same docker run, same SERVER_URL, same volume names
 sudo docker logs -f twenty-app-dev
@@ -163,6 +163,22 @@ curl -s https://crm.tllcrm.fyi/.well-known/mcp/server-card.json
 
 The `version` field in the reply is the server's version. No authentication needed, so this works
 from any machine that can reach the CRM.
+
+**Pin the version tag, do not chase `latest`.** VERIFIED on this NAS: `latest` sat on a manifest
+that was neither the current `latest` nor the previous release, and the UGOS Update button happily
+recreated the container on it. The symptom was a successful-looking upgrade that still reported the
+old version. `sudo docker pull twentycrm/twenty-app-dev:v2.35` then said "Downloaded newer image",
+which is the tell: if `latest` really pointed at the same manifest, that would have been a no-op.
+
+Check what you actually have against Docker Hub rather than trusting the tag:
+
+```bash
+sudo docker images --digests twentycrm/twenty-app-dev
+```
+
+`APP_VERSION` is baked into the image as a build arg (`packages/twenty-docker/twenty/Dockerfile:277`)
+and is env-only (`config-variables.ts:2056`), so `docker exec twenty-app-dev printenv APP_VERSION`
+is the server's own answer and no cache sits in front of it.
 
 **Keep the server and the CLI on the same minor version.** The SDK writes metadata against the
 schema it was built for, and the failures when they diverge are unhelpful: `Cannot query field
