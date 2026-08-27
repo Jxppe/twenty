@@ -35,7 +35,7 @@ A quotation copies product description and price at creation. It does not refere
 ## 3. Ownership
 
 Sales owns products, quotations, invoices and payment requests. It does **not** own the work:
-`Quotation.matter` points at the Matter (currently a relabelled `Opportunity`, see the `matters`
+`Quotation.matter` points at the Job (currently a relabelled `Opportunity`, see the `matters`
 skill).
 
 ## 4. `billingEntity` is required, and it flows
@@ -43,7 +43,7 @@ skill).
 Required on `Quotation` and `Invoice`, because it names **the legal party to the contract**, not a
 category. Thailiving Law, Unique X Services and Pattaya Notary bill separately for tax reasons.
 
-Defaults flow `ChannelAccount -> Matter -> Quotation -> Invoice`, overridable at any step. It is
+Defaults flow `ChannelAccount -> Job -> Quotation -> Invoice`, overridable at any step. It is
 **not** on `Person` or `Company`: clients are shared across all three, which is why there is one
 workspace.
 

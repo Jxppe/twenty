@@ -106,11 +106,11 @@ Consequences, in order:
 Product identity comes from two places: the vocabulary, and the screens we add.
 
 **Vocabulary is free.** Standard object labels are editable (VERIFIED), so Opportunity becomes
-Matter, Close date becomes Target completion, People becomes Clients. A screen saying "Matter" with a
+Job, Close date becomes Target completion, People becomes Clients. A screen saying "Job" with a
 "Target completion" reads as a law firm; the same screen saying "Opportunity" with a "Close date"
 reads as a sales CRM. Same table underneath. Change `label`, never `name`.
 
-**Screens are where the rest comes from**: the matter page, bookings, quotations, payments. Not from
+**Screens are where the rest comes from**: the job page, bookings, quotations, payments. Not from
 restyling Companies and People.
 
 Restyling core would mean editing `twenty-front`, which triggers AGPL §13 and permanent upgrade
@@ -195,7 +195,7 @@ When a primitive proves itself in two apps, promote it to a shared internal pack
 
 1. **Thai typography: resolved in the tokens, unverified in practice.** Inter has no Thai coverage,
    so the stack carries a Thai companion face. Verify the metrics actually pair well at 13-15px, and
-   that mixed Thai/Latin lines do not jitter. This matters more than it used to: under D8 the whole
+   that mixed Thai/Latin lines do not jitter. This jobs more than it used to: under D8 the whole
    interface must be able to switch to Thai, not just customer content inside it. Thai needs more
    vertical room, and a 32px row set for Latin is where that shows up first.
 2. **Do we need a brand accent** distinct from Twenty's blue, and does introducing one create the

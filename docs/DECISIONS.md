@@ -6,6 +6,28 @@ Each entry says what was decided, why, what would reverse it, and what was verif
 
 ---
 
+## D9 — The word is Job, not Matter
+
+**Decided.** A piece of client work is a **Job** in the interface.
+
+**Why not Matter.** It is the correct term of art, and it is the wrong word here. Two reasons, both
+about the people using this:
+
+- **The work is not all legal.** Visa applications, company registration and notarization are as much
+  of the business as disputes are, and "matter" carries a litigation flavour that fits Thailiving Law
+  better than it fits Unique X Services or Pattaya Notary.
+- **Staff read English chrome as a second language** until `th-TH` lands (D8), and "Matter" is among
+  the least transparent words available. "Job" needs no explanation to anyone.
+
+**Cost of being wrong:** one line. Labels on standard objects are stored as overrides and changed by
+the install hook, so the vocabulary can move again without touching data.
+
+**Identifiers did not move.** `matterDeadline`, `matterId` and the rest keep their names: renaming a
+synced object or field is a destructive metadata change, and nobody sees an identifier. See
+[`JOBS.md`](./JOBS.md) §3.
+
+---
+
 ## D8 — The UI must switch to Thai, via `AppLocales` plus a partial catalogue
 
 **Decided.** Add `th-TH` to Twenty's locale list and ship an incomplete Thai catalogue, growing it
@@ -68,7 +90,7 @@ English. Thai is what clients write to us in, and what the interface must be abl
 ## D7 — The CRM is a system of work, not a pipeline
 
 **Decided.** Records are shaped around *what we are doing for a client*, not *how likely we are to
-close a deal*. A `Matter` page leads with blocking items, deadlines and open work. Amount and
+close a deal*. A `Job` page leads with blocking items, deadlines and open work. Amount and
 probability move to the bottom or disappear.
 
 **Why.** Twenty's `Opportunity` is a forecast record: amount, stage, close date, probability. A law
@@ -77,7 +99,7 @@ table underneath, entirely different page.
 
 **Reverses if:** never. This is what the firm actually does.
 
-See [`MATTERS.md`](./MATTERS.md).
+See [`JOBS.md`](./JOBS.md).
 
 ---
 
@@ -113,7 +135,7 @@ do not cover object metadata.
 **Why.** VERIFIED: `CalendarEvent` carries `iCalUid`, `externalCreatedAt`, `externalUpdatedAt` and
 `calendarChannelEventAssociations`. It is a mirror of an external calendar, the same trap as `Message`
 being a mirror of email. Bookings need their own lifecycle (requested, confirmed, no-show) and their
-own relations (matter, billing entity, fee).
+own relations (job, billing entity, fee).
 
 VERIFIED and load-bearing: `ViewType.CALENDAR` exists with DAY/WEEK/MONTH layouts, and
 `CALENDAR_WIDGET` for dashboards. **Group and per-staff calendars are view configuration, not custom
@@ -138,7 +160,7 @@ something and bought nothing.
   so "offer them the source" costs nothing. Core modification is still bad for upgrades, so the
   discipline stays, but it is no longer a commercial risk.
 - Twenty Enterprise is not needed: no billing, no SSO requirement. **Flagged:** row-level permissions
-  are Enterprise, and matter confidentiality is a real use for them. Revisit if it bites.
+  are Enterprise, and job confidentiality is a real use for them. Revisit if it bites.
 - No multi-tenancy work. One workspace.
 
 **If Takdai later wants an inbox**, it builds its own and talks to whatever CRM sits behind it. The
@@ -204,12 +226,12 @@ that need to name a legal person.
 **Why.** Thailiving Law, Unique X Services and Pattaya Notary share customers but bill separately for
 tax reasons. Separate workspaces would split the client history, which is the thing worth having.
 
-`billingEntity` goes on `Matter`, `Quotation`, `Invoice` and `ChannelAccount`. **Not** on `Person` or
+`billingEntity` goes on `Job`, `Quotation`, `Invoice` and `ChannelAccount`. **Not** on `Person` or
 `Company`: the client is shared, and that is the point. It is **required** on Quotation and Invoice,
 because it names the legal party to the contract, not a category.
 
-It flows by default: a message on the Pattaya Notary channel opens a matter defaulting to Pattaya
-Notary; the quotation inherits from the matter; the invoice from the quotation. Staff can override at
+It flows by default: a message on the Pattaya Notary channel opens a job defaulting to Pattaya
+Notary; the quotation inherits from the job; the invoice from the quotation. Staff can override at
 any step.
 
 ---
@@ -241,8 +263,8 @@ the licence cost is nil and the merge cost is the only thing being paid.
 | --- | --- | --- |
 | O1 | Does TLLACC keep timesheets, or do work logs move here? | `WorkLog` design |
 | O2 | Does TLLACC currently issue invoices? Two systems issuing them is the failure mode. | Invoice ownership |
-| O3 | Relabel `Opportunity` as Matter, or build a separate `Matter` object? | Start relabelled; split when it chafes |
+| O3 | Relabel `Opportunity` as Job, or build a separate `Job` object? | Start relabelled; split when it chafes |
 | O4 | Do staff need to search **Thai contact names** in the CRM? Needs a Postgres tokenizer extension. | Search config |
 | O5 | Which slip verification provider, at what cost and failure rate? | Payment automation |
 | O6 | Build the booking availability engine, or use Cal.com? | Leaning build; the rules are simple |
-| O7 | Row-level permissions for matter confidentiality — worth an Enterprise subscription? | Permission model |
+| O7 | Row-level permissions for job confidentiality — worth an Enterprise subscription? | Permission model |

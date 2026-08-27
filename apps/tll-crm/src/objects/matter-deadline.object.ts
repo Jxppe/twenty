@@ -22,7 +22,7 @@ export default defineObject({
   namePlural: 'matterDeadlines',
   labelSingular: 'Deadline',
   labelPlural: 'Deadlines',
-  description: 'A date a matter has to hit, and who is answerable for it',
+  description: 'A date a job has to hit, and who is answerable for it',
   icon: 'IconAlarm',
   labelIdentifierFieldMetadataUniversalIdentifier:
     MATTER_DEADLINE_TITLE_FIELD_UNIVERSAL_IDENTIFIER,

@@ -17,7 +17,7 @@ export default defineField({
   type: FieldType.RELATION,
   name: 'bookings',
   label: 'Bookings',
-  description: 'Appointments about this matter',
+  description: 'Appointments about this job',
   icon: 'IconCalendarEvent',
   relationTargetObjectMetadataUniversalIdentifier: BOOKING_OBJECT_UNIVERSAL_IDENTIFIER,
   relationTargetFieldMetadataUniversalIdentifier: BOOKING_MATTER_FIELD_UNIVERSAL_IDENTIFIER,

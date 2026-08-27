@@ -77,7 +77,7 @@ should be treated as a hard architectural constraint, not a style preference.
 
 ### Enterprise-licensed files
 
-314 files carry `/* @license Enterprise */`. The concentrations matter, because several are things
+314 files carry `/* @license Enterprise */`. The concentrations job, because several are things
 the brief explicitly asks for:
 
 | Area | Files | Brief requirement it serves |
@@ -95,7 +95,7 @@ the correct host and seat count, and forbids redistribution.
 **RESOLVED by D4.** As an internal single-firm system we need none of it: no subscription billing, no
 SSO requirement, no usage metering. The community edition suffices.
 
-**One flag remains (O7):** row-level permission predicates are Enterprise, and matter
+**One flag remains (O7):** row-level permission predicates are Enterprise, and job
 confidentiality is a genuine use for them. Revisit if it bites.
 
 The AGPL §13 exposure is also now small: our network users are our own staff, so offering them the
@@ -162,7 +162,7 @@ navigationMenuItems pageLayouts        pageLayoutTabs
 commandMenuItems    timelineActivityTypes                 translations
 ```
 
-The capabilities that matter for us:
+The capabilities that job for us:
 
 **Custom objects and fields** — `defineObject()`, `defineField()`. All 25 field types, relations
 (`ONE_TO_MANY`, `MANY_TO_ONE`, `MORPH_RELATION`), `onDelete` behaviour, indexes.
@@ -272,7 +272,7 @@ Twenty (unmodified, upstream-tracking)
 │                verify-payment (cron or provider webhook)
 │
 └── app: tll-crm                 ← installed only in the Thailiving workspace
-      objects    Matter, PracticeArea, DocumentChecklist, …
+      objects    Job, PracticeArea, DocumentChecklist, …
       scope      Thailiving Law, Unique X, Pattaya Notary
 ```
 
@@ -376,7 +376,7 @@ Two consequences worth knowing before this lands:
 
 ### 6.1b Two things an app manifest cannot express
 
-Found while building the Matter page.
+Found while building the Job page.
 
 **Relabelling a standard object.** `updateObject` accepts `labelSingular`, `labelPlural` and `icon`
 with no guard on standard objects, but there is no manifest entry for it: the SDK's object manifest
@@ -387,7 +387,7 @@ upgrade. Remember `isLabelSyncedWithName: false` in the same update or the label
 **Pinning a record-page widget to one of our fields.** `PageLayoutWidgetConfiguration` of type
 `FIELD` requires `fieldMetadataId`, a runtime workspace UUID. The manifest serializer only rewrites
 properties typed as relations into `...UniversalIdentifier` form, and this one is a plain string, so
-there is nothing an app can put there. A custom tab showing "deadlines for this matter" as a table
+there is nothing an app can put there. A custom tab showing "deadlines for this job" as a table
 is therefore not declarable today. Relation fields still appear on the record page through Twenty's
 own layout, which covers most of the need.
 
@@ -661,7 +661,7 @@ the real question. Fix by selecting on mousedown instead of click.
 
 ### Thai content handling — VERIFIED
 
-Distinct from UI localization, and the part that actually matters: customers write to us in Thai.
+Distinct from UI localization, and the part that actually jobs: customers write to us in Thai.
 
 | Concern | Status |
 | --- | --- |
@@ -691,7 +691,7 @@ search in the CRM (needs the Postgres extension).
 
 ### Additional verified findings
 
-Established after the first audit pass, and load-bearing for [`MATTERS.md`](./MATTERS.md).
+Established after the first audit pass, and load-bearing for [`JOBS.md`](./JOBS.md).
 
 **Calendar views are native.** `ViewType` includes `CALENDAR` and `CALENDAR_WIDGET`, with
 `ViewCalendarLayout` of `DAY` / `WEEK` / `MONTH`. Any object with a date field renders on a calendar,

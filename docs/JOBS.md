@@ -1,4 +1,4 @@
-# Matters, Work and Scheduling
+# Jobs, Work and Scheduling
 
 How the firm's actual work is modelled. Status: **PROPOSED**. Nothing built.
 
@@ -21,7 +21,7 @@ it does not belong on the page. If a field tells someone what to do next, it bel
 
 ---
 
-## 2. The Matter page
+## 2. The Job page
 
 The target. Ordered by what someone opening it actually needs.
 
@@ -50,14 +50,24 @@ Recent activity
 
 Blocking items first. Money last. Nothing about probability.
 
-Buildable with `definePageLayout` on the Matter object: a `VERTICAL_LIST` tab with `FIELD`,
+Buildable with `definePageLayout` on the Job object: a `VERTICAL_LIST` tab with `FIELD`,
 `RECORD_TABLE` and `TIMELINE` widgets. Some panels may need a front component; most will not.
 
 ---
 
 ## 3. Objects
 
-### Matter
+**Labels say Job. Identifiers say matter.** The object we relabelled is Twenty's `opportunity`, and
+our own objects were named `matterDeadline` and so on before the vocabulary settled. Renaming a
+synced object or field is a destructive metadata change, and the identifiers are internal: no user
+ever sees `matterDeadlineId`. So the names stay and the labels are what moved.
+
+If that ever becomes confusing enough to be worth a migration, it is a rename plus a data move, not
+a label edit.
+
+
+
+### Job
 
 Start by **relabelling `Opportunity`** (D6), not by building a new object. That inherits pipelines,
 kanban, forecasting and every existing view for free. Split it out only when the shared shape
@@ -65,7 +75,7 @@ genuinely chafes. See O3.
 
 | Twenty field | Relabelled | Notes |
 | --- | --- | --- |
-| `name` | Matter | e.g. "Retirement visa — Somchai Prasert" |
+| `name` | Job | e.g. "Retirement visa — Somchai Prasert" |
 | `stage` | Status | Intake / Conflict check / Engaged / In progress / Waiting on client / Closed |
 | `amount` | Fee | Keep. Quoted value. |
 | `closeDate` | Target completion | Not a forecast date, a delivery date |
@@ -103,7 +113,7 @@ through the channel the client actually uses.
 `name`, `defaultBillingEntity`, `isActive`. Visa, property, corporate, litigation, notarization,
 estate.
 
-`defaultBillingEntity` is how a matter lands on the right legal person without anyone thinking about
+`defaultBillingEntity` is how a job lands on the right legal person without anyone thinking about
 it: notarization defaults to Pattaya Notary, company registration to Unique X Services.
 
 ### Booking
@@ -134,7 +144,7 @@ No front component. No sandbox. No hand-built calendar.
 ```
 Booking
   person          the client
-  matter          what it is about, if anything yet
+  job          what it is about, if anything yet
   billingEntity   which company is taking it
   responsible     WorkspaceMember
   service         consultation type, duration, fee
@@ -168,7 +178,7 @@ consultation lengths) and Cal.com's value is mostly in complexity this firm does
 WorkLog
   workspaceMember, date, minutes
   description
-  matter / booking / person     what it was for
+  job / booking / person     what it was for
   billingEntity
   isBillable
 ```
@@ -182,7 +192,7 @@ Table view for the week, calendar view by date, aggregate by staff, by client, b
 skipped again, and within a month the data is worthless and the reports are a fiction.
 
 So: **derive most of it, ask for the rest.** The system already knows they took three bookings,
-handled eleven conversations and moved two matters. Pre-fill that, and ask only "anything else, and
+handled eleven conversations and moved two jobs. Pre-fill that, and ask only "anything else, and
 how long did it take". A report that arrives 80% complete gets finished. A blank one does not.
 
 Design the pre-fill before designing the form.
@@ -193,7 +203,7 @@ TLLACC already does HR. Work logs sit on that line. If TLLACC keeps timesheets a
 logs, there are two sources of truth for how staff spent their day.
 
 Decide: does TLLACC own "what staff did with their time" with Twenty logging only client-facing work
-against matters? Or does this move here and TLLACC keeps leave and attendance?
+against jobs? Or does this move here and TLLACC keeps leave and attendance?
 
 Also unresolved and more urgent (O2): **does TLLACC currently issue invoices?** Two systems issuing
 invoices is a worse failure than either doing it badly alone.
@@ -204,17 +214,17 @@ invoices is a worse failure than either doing it badly alone.
 
 Not separate builds. Same records, different default views and roles.
 
-**Lawyer:** my matters by status · my bookings this week · my deadlines, soonest first · matters
+**Lawyer:** my jobs by status · my bookings this week · my deadlines, soonest first · jobs
 waiting on a client · my unlogged time
 
-**Manager:** all matters by status · deadlines across the firm · staff utilisation from work logs ·
-revenue by billing entity · overdue invoices · unassigned enquiries · matters with no activity in 14
+**Manager:** all jobs by status · deadlines across the firm · staff utilisation from work logs ·
+revenue by billing entity · overdue invoices · unassigned enquiries · jobs with no activity in 14
 days
 
 That last one is the most useful management view in the system and costs nothing: a filter on
-`lastActivityAt`. Matters do not usually fail loudly, they go quiet.
+`lastActivityAt`. Jobs do not usually fail loudly, they go quiet.
 
-Twenty roles control visibility. Row-level rules for matter confidentiality are Enterprise (O7);
+Twenty roles control visibility. Row-level rules for job confidentiality are Enterprise (O7);
 plain view filters are not.
 
 ---
@@ -226,7 +236,7 @@ VERIFIED, so we do not rebuild it:
 | Need | Twenty provides |
 | --- | --- |
 | Work items with owner and due date | `Task`: `title`, `dueAt`, `status`, `assignee`, attachments |
-| Attaching work to a matter | `TaskTarget` is polymorphic and has a `custom` slot |
+| Attaching work to a job | `TaskTarget` is polymorphic and has a `custom` slot |
 | Who did what, when | `TimelineActivity` plus `createdBy` / `updatedBy` ACTOR fields |
 | Fanning an event onto the client's timeline | `defineTimelineActivityType` with `emit.through` |
 | Files on any record | `FILES` field type with signed URLs |
@@ -234,7 +244,7 @@ VERIFIED, so we do not rebuild it:
 | Deadline escalation | Workflow `DATABASE_EVENT` and `CRON` triggers |
 | Notes | `Note` and `NoteTarget` |
 
-We build: Matter shaping, `MatterDeadline`, `RequiredDocument`, `PracticeArea`, `Booking`,
+We build: Job shaping, `MatterDeadline`, `RequiredDocument`, `PracticeArea`, `Booking`,
 `WorkLog`, the page layouts, and the client-facing booking page.
 
 ---
@@ -243,7 +253,7 @@ We build: Matter shaping, `MatterDeadline`, `RequiredDocument`, `PracticeArea`, 
 
 Shortest path to daily use.
 
-1. **The Matter page.** Relabel Opportunity, add `MatterDeadline`, `RequiredDocument`,
+1. **The Job page.** Relabel Opportunity, add `MatterDeadline`, `RequiredDocument`,
    `PracticeArea` and `billingEntity`, build the page layout. Small, and it changes daily life
    immediately: staff can finally see what is happening with a client.
 2. **Bookings and calendars.** Mostly view configuration once the object exists.

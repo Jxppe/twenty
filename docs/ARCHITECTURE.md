@@ -37,7 +37,7 @@ One workspace. `BillingEntity` as a record, not as a tenant boundary (D2).
 | Unique X Services | Service work: company setup, registrations. Separate for tax. |
 | Pattaya Notary | Client-facing notarization brand. Has its own website and social channels. |
 
-`billingEntity` is a **required** relation on `Matter`, `Quotation` and `Invoice`, and present on
+`billingEntity` is a **required** relation on `Job`, `Quotation` and `Invoice`, and present on
 `ChannelAccount`. It names the legal party to a contract, so it is not optional and not a tag.
 
 It is **not** on `Person` or `Company`. Clients are shared across all three, which is the entire
@@ -47,12 +47,12 @@ It flows by default and can always be overridden:
 
 ```
 ChannelAccount (Pattaya Notary LINE)
-        └─► Matter defaults to Pattaya Notary
-                └─► Quotation inherits from Matter
+        └─► Job defaults to Pattaya Notary
+                └─► Quotation inherits from Job
                         └─► Invoice inherits from Quotation
 ```
 
-`PracticeArea.defaultBillingEntity` does the same job for matters that do not arrive through a
+`PracticeArea.defaultBillingEntity` does the same job for jobs that do not arrive through a
 channel: notarization defaults to Pattaya Notary, company registration to Unique X Services.
 
 ---
@@ -69,15 +69,15 @@ We relabel the vocabulary (D6) and extend with app-defined fields. We do not for
 
 ### Practice — our app
 
-Matters, deadlines, required documents, practice areas, bookings, work logs.
+Jobs, deadlines, required documents, practice areas, bookings, work logs.
 
-The core of the system. See [`MATTERS.md`](./MATTERS.md).
+The core of the system. See [`JOBS.md`](./JOBS.md).
 
 ### Sales — our app
 
 Products and services, quotations, invoices, payment requests.
 
-Does not own the matter: `Quotation.matter` points at it.
+Does not own the job: `Quotation.matter` points at it.
 
 ### Payments — our app
 
@@ -115,7 +115,7 @@ twenty/                     upstream, tracked, unmodified
   packages/twenty-sdk       MIT. The app toolkit.
 
 apps/
-  tll-crm                   matters, bookings, work logs, sales, payments
+  tll-crm                   jobs, bookings, work logs, sales, payments
                             (also holds the omnichannel prototype, kept as evidence)
 ```
 
@@ -224,6 +224,6 @@ CRM primitives. Payroll.
 
 Tracked in [`DECISIONS.md`](./DECISIONS.md) under "Open". Summarised:
 
-O1 work logs versus TLLACC · O2 who issues invoices · O3 relabel or split Matter · O4 Thai contact
+O1 work logs versus TLLACC · O2 who issues invoices · O3 relabel or split Job · O4 Thai contact
 name search · O5 slip verification provider · O6 build or adopt booking availability · O7 Enterprise
-for matter confidentiality
+for job confidentiality

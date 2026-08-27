@@ -18,7 +18,7 @@ export default defineField({
   type: FieldType.RELATION,
   name: 'practiceArea',
   label: 'Practice area',
-  description: 'The kind of work this matter is',
+  description: 'The kind of work this job is',
   icon: 'IconScale',
   relationTargetObjectMetadataUniversalIdentifier: PRACTICE_AREA_OBJECT_UNIVERSAL_IDENTIFIER,
   relationTargetFieldMetadataUniversalIdentifier: PRACTICE_AREA_MATTERS_FIELD_UNIVERSAL_IDENTIFIER,

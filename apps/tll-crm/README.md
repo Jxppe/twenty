@@ -1,6 +1,6 @@
 # TLL CRM
 
-The practice management app for Thailiving Law, Unique X Services and Pattaya Notary: matters,
+The practice management app for Thailiving Law, Unique X Services and Pattaya Notary: jobs,
 deadlines, required documents and the firm's billing entities. Also carries the omnichannel inbox
 prototype, which predates D4 and is kept as evidence rather than as product.
 
@@ -8,7 +8,7 @@ This is a **Twenty app**. It adds objects, screens and server functions to a Twe
 the published application interfaces, and changes nothing in Twenty's own source. That boundary is
 deliberate: see [`/docs/DECISIONS.md`](../../docs/DECISIONS.md) D1.
 
-Read [`/docs/MATTERS.md`](../../docs/MATTERS.md) before changing the domain.
+Read [`/docs/JOBS.md`](../../docs/JOBS.md) before changing the domain.
 
 ## Starting a session
 

@@ -19,8 +19,8 @@ const RELABELS = [
   {
     universalIdentifier:
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.opportunity.universalIdentifier,
-    labelSingular: 'Matter',
-    labelPlural: 'Matters',
+    labelSingular: 'Job',
+    labelPlural: 'Jobs',
     icon: 'IconBriefcase',
   },
   {

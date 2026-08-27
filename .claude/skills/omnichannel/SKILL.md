@@ -19,7 +19,7 @@ feature is ever built here after all.
 
 ## 1. Takdai owns the conversation, the CRM owns the client
 
-One ID, pointing one direction. Takdai stores `crmPersonId` and `crmMatterId` and reads the rest from
+One ID, pointing one direction. Takdai stores `crmPersonId` and `crmJobId` and reads the rest from
 the CRM when it needs it. **The CRM never learns what LINE is.**
 
 Never mirror contact fields onto a conversation. Never create a parallel contact store.
@@ -28,7 +28,7 @@ Never mirror contact fields onto a conversation. Never create a parallel contact
 
 An AI agent greets, establishes what they want, asks **whether they have used the firm before**,
 collects a name and a contact method, and judges whether this is a real enquiry. Only on pass does it
-create a `Person` and a `Matter`.
+create a `Person` and a `Job`.
 
 Otherwise every wrong number and spam message becomes a contact, and the CRM rots within a month.
 
@@ -41,7 +41,7 @@ law firm.
 ## 3. Auto-link only on certainty
 
 Twenty has **no record merge and no duplicate detection**, so a wrong link is expensive to undo. In a
-law firm it also puts one client's matter in front of another client's record, which is a
+law firm it also puts one client's job in front of another client's record, which is a
 confidentiality problem, not a data quality problem.
 
 | Signal | Action |
@@ -66,7 +66,7 @@ and staff learn to ignore the prompt.
 
 ## 4. `billingEntity` on `ChannelAccount`
 
-A message arriving on the Pattaya Notary LINE account opens a matter defaulting to Pattaya Notary.
+A message arriving on the Pattaya Notary LINE account opens a job defaulting to Pattaya Notary.
 That default is how the right legal person ends up on the contract without anyone thinking about it.
 
 ## 5. No provider logic outside an adapter

@@ -1,11 +1,11 @@
 ---
-name: matters
-description: How the firm's work is modelled - matters, deadlines, required documents, bookings, calendars and work logs. Use when working on the Matter object or page, practice areas, scheduling, staff work reports, or any question about what the CRM is for.
+name: jobs
+description: How the firm's work is modelled - jobs, deadlines, required documents, bookings, calendars and work logs. Use when working on the Job object or page, practice areas, scheduling, staff work reports, or any question about what the CRM is for.
 ---
 
-# Matters and work
+# Jobs and work
 
-Full model in `docs/MATTERS.md`. Decisions D5, D6 and D7 in `docs/DECISIONS.md`.
+Full model in `docs/JOBS.md`. Decisions D5, D6 and D7 in `docs/DECISIONS.md`.
 
 ## 1. This is a system of work, not a pipeline
 
@@ -35,7 +35,7 @@ applies as normal.
 Writing object metadata at all needs the **`DATA_MODEL` permission flag** on the app's role: record
 permissions do not cover it.
 
-Matter starts as a relabelled `Opportunity`, which inherits pipelines, kanban and every existing
+Job starts as a relabelled `Opportunity`, which inherits pipelines, kanban and every existing
 view for free. Split it into its own object only when the shared shape genuinely chafes (O3).
 
 ## 3. Deadlines are the object nobody designs first
@@ -50,7 +50,7 @@ a workflow that escalates as critical deadlines approach.
 
 `CalendarEvent` carries `iCalUid` and `externalCreatedAt`: it is a **mirror** of Google or Microsoft,
 the same trap as `Message` being a mirror of email. Bookings need their own lifecycle (`REQUESTED`,
-`CONFIRMED`, `NO_SHOW`) and their own relations (matter, billing entity, fee).
+`CONFIRMED`, `NO_SHOW`) and their own relations (job, billing entity, fee).
 
 Push confirmed bookings out to staff Google Calendars with the `create-calendar-event` workflow
 action, so staff see them where they already look.
@@ -69,12 +69,12 @@ form.
 
 ## 6. `billingEntity` is required, and it flows
 
-Required on `Matter`, `Quotation` and `Invoice`; present on `ChannelAccount`. **Not** on `Person` or
+Required on `Job`, `Quotation` and `Invoice`; present on `ChannelAccount`. **Not** on `Person` or
 `Company` - clients are shared across Thailiving Law, Unique X Services and Pattaya Notary, which is
 the entire reason for one workspace.
 
-Defaults flow `ChannelAccount -> Matter -> Quotation -> Invoice`, with
-`PracticeArea.defaultBillingEntity` covering matters that do not arrive through a channel. Staff can
+Defaults flow `ChannelAccount -> Job -> Quotation -> Invoice`, with
+`PracticeArea.defaultBillingEntity` covering jobs that do not arrive through a channel. Staff can
 override at any step.
 
 ## 7. Declare a timeline activity type for anything worth asking about later
@@ -86,7 +86,7 @@ backfilled**, so declare them when you add the state change, not when someone as
 ## 8. Manager and lawyer are views, not builds
 
 Same records, different default views and roles. The most useful management view in the system is a
-filter on `lastActivityAt`: matters with no activity in 14 days. Matters do not fail loudly, they go
+filter on `lastActivityAt`: jobs with no activity in 14 days. Jobs do not fail loudly, they go
 quiet.
 
 ## 9. What Twenty already provides
@@ -95,5 +95,5 @@ quiet.
 `createdBy`/`updatedBy` ACTOR fields · `FILES` fields with signed URLs · calendar views · workflow
 `DATABASE_EVENT` and `CRON` triggers · `Note` and `NoteTarget`.
 
-We build: Matter shaping, `MatterDeadline`, `RequiredDocument`, `PracticeArea`, `Booking`, `WorkLog`,
+We build: Job shaping, `MatterDeadline`, `RequiredDocument`, `PracticeArea`, `Booking`, `WorkLog`,
 the page layouts, and the public booking page.

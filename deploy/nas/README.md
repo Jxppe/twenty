@@ -136,7 +136,7 @@ to blanks starts and then fails in ways that look like a Twenty problem.
 `twentycrm/twenty:latest` publishes `linux/amd64`. Confirm with `uname -m` over SSH if you want
 to be sure: `x86_64` is what you are looking for.
 
-**RAM matters more.** Budget about 3GB across the four containers. A DXP2800 with the stock 8GB
+**RAM jobs more.** Budget about 3GB across the four containers. A DXP2800 with the stock 8GB
 is comfortable; anything already running Plex transcodes and a few VMs will not be.
 
 **Decide the address now.** `SERVER_URL` must be exactly what you type in the browser, port

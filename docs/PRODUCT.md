@@ -8,7 +8,7 @@
 >
 > **This repository is TLL CRM**: the internal practice management system for Thailiving Law,
 > Unique X Services and Pattaya Notary. For what is actually being built, read
-> [`DECISIONS.md`](./DECISIONS.md), then [`MATTERS.md`](./MATTERS.md), then
+> [`DECISIONS.md`](./DECISIONS.md), then [`JOBS.md`](./JOBS.md), then
 > [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 >
 > It is kept unedited because the domain thinking behind it (the customer lifecycle in §26 and §9,

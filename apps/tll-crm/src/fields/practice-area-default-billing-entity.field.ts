@@ -18,7 +18,7 @@ export default defineField({
   type: FieldType.RELATION,
   name: 'defaultBillingEntity',
   label: 'Default billing entity',
-  description: 'Which entity a matter in this practice area bills to unless overridden',
+  description: 'Which entity a job in this practice area bills to unless overridden',
   icon: 'IconBuildingBank',
   relationTargetObjectMetadataUniversalIdentifier: BILLING_ENTITY_OBJECT_UNIVERSAL_IDENTIFIER,
   relationTargetFieldMetadataUniversalIdentifier: BILLING_ENTITY_PRACTICE_AREAS_FIELD_UNIVERSAL_IDENTIFIER,

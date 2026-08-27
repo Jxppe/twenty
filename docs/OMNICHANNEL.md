@@ -33,8 +33,8 @@ LINE / WhatsApp / Messenger / Instagram / webchat / email
    │          │
 stays in    CRM REST API:
 Takdai        create Person
-(no CRM       create Matter
- record)      store crmPersonId + crmMatterId on the Takdai conversation
+(no CRM       create Job
+ record)      store crmPersonId + crmJobId on the Takdai conversation
                 │
                 ▼
          staff notified, then:
@@ -153,7 +153,7 @@ is not acceptable in a law firm.
 Matching an incoming chatter to an existing client. The hardest correctness problem in the system.
 
 **VERIFIED: Twenty has no record merge and no duplicate detection.** So a wrong link is expensive to
-undo. And in a law firm a wrong link puts one client's matter in front of another client's record,
+undo. And in a law firm a wrong link puts one client's job in front of another client's record,
 which is a confidentiality problem, not a data quality problem.
 
 **Therefore: auto-link only on certainty. Everything else is a suggestion a human confirms.**

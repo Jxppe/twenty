@@ -19,7 +19,7 @@ industry-neutral. Law-firm concepts are first-class.
 | --- | --- |
 | `docs/DECISIONS.md` | **First.** Why things are the way they are, and what would reverse them |
 | `docs/ARCHITECTURE.md` | Domain boundaries and ownership. Before any structural decision |
-| `docs/MATTERS.md` | Matters, deadlines, documents, bookings, work logs. The core of the product |
+| `docs/JOBS.md` | Jobs, deadlines, documents, bookings, work logs. The core of the product |
 | `docs/TWENTY_ARCHITECTURE.md` | What Twenty actually provides, VERIFIED / MEASURED / PROPOSED |
 | `docs/FINANCE.md` | Quotations, invoices, FlowAccount |
 | `docs/PAYMENTS.md` | PromptPay, Thai bank transfer |
@@ -72,7 +72,7 @@ copyrightable; source is.
 **8. Avoid unnecessary dependencies.** Twenty ships a design system (`twenty-ui`), an icon set, a
 queue, file storage and a workflow engine. A new library needs a written justification.
 
-**9. Maintain domain ownership.** CRM owns people and companies. Practice owns matters, deadlines,
+**9. Maintain domain ownership.** CRM owns people and companies. Practice owns jobs, deadlines,
 documents, bookings, work logs. Sales owns quotations and invoices. Payments owns PromptPay and bank
 transfer. **FlowAccount owns the ledger, statutory accounting and tax.** We are not building an ERP.
 

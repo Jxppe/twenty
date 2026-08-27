@@ -17,7 +17,7 @@ export default defineField({
   type: FieldType.RELATION,
   name: 'matterDeadlines',
   label: 'Deadlines',
-  description: 'Dates this matter has to hit',
+  description: 'Dates this job has to hit',
   icon: 'IconAlarm',
   relationTargetObjectMetadataUniversalIdentifier: MATTER_DEADLINE_OBJECT_UNIVERSAL_IDENTIFIER,
   relationTargetFieldMetadataUniversalIdentifier: MATTER_DEADLINE_MATTER_FIELD_UNIVERSAL_IDENTIFIER,

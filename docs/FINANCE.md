@@ -2,7 +2,7 @@
 
 Status: **PROPOSED**. Nothing here is implemented.
 
-Read [`DECISIONS.md`](./DECISIONS.md) D2 and D3 first, and [`MATTERS.md`](./MATTERS.md) for what a
+Read [`DECISIONS.md`](./DECISIONS.md) D2 and D3 first, and [`JOBS.md`](./JOBS.md) for what a
 matter is.
 
 ---
@@ -46,7 +46,7 @@ provider owns it. We hold an operational view and push facts to the provider.
 
 All documents carry a **required** `billingEntity` (D2). It names the legal party to the contract,
 so it is neither optional nor a category. It defaults down the chain
-(channel → matter → quotation → invoice) and can be overridden at any step.
+(channel → job → quotation → invoice) and can be overridden at any step.
 
 ### Quotation
 
@@ -56,7 +56,7 @@ so it is neither optional nor a category. It defaults down the chain
 | `status` | `DRAFT` / `SENT` / `ACCEPTED` / `DECLINED` / `EXPIRED` |
 | `validUntil` | |
 | `subtotal`, `discount`, `tax`, `total` | Stored, not computed on read: a sent quotation must never change because a product price did |
-| `matter` | Relation to the matter this quotes for |
+| `matter` | Relation to the job this quotes for |
 | `billingEntity` | **Required.** Which of the three companies is contracting |
 | `person`, `company` | Relations to Twenty records |
 | `pdf` | `FILES` field |
