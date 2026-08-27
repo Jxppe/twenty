@@ -93,6 +93,7 @@ export default defineObject({
       name: 'file',
       label: 'File',
       icon: 'IconPaperclip',
+      universalSettings: { maxNumberOfValues: 10 },
     },
     {
       universalIdentifier: REQUIRED_DOCUMENT_NOTES_FIELD_UNIVERSAL_IDENTIFIER,

@@ -45,7 +45,9 @@ export default defineObject({
     {
       universalIdentifier: MATTER_DEADLINE_TYPE_FIELD_UNIVERSAL_IDENTIFIER,
       type: FieldType.SELECT,
-      name: 'type',
+      // `type` is in RESERVED_METADATA_NAME_KEYWORDS: the server would silently
+      // rename it to typeCustom.
+      name: 'deadlineType',
       label: 'Type',
       description: 'Where the obligation comes from',
       icon: 'IconCategory',
