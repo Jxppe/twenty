@@ -201,6 +201,16 @@ how long did it take". A report that arrives 80% complete gets finished. A blank
 
 Design the pre-fill before designing the form.
 
+**Built:** `draft-work-log` takes a workspace member and a date and returns the lines the system can
+already answer for that day: every booking they took, with its minutes derived from start and end and
+its job, client and billing entity carried over; every deadline they completed, with the job attached
+and minutes deliberately blank, because a guess there is worse than an empty box; and the client
+messages they handled, as one line rather than eleven. It returns drafts, not records: nothing is
+written until a person confirms it.
+
+The form on top of it is not built. When it is, it should open with these already filled in and one
+question outstanding per line.
+
 ### Unresolved: TLLACC (O1)
 
 TLLACC already does HR. Work logs sit on that line. If TLLACC keeps timesheets and Twenty keeps work
@@ -261,7 +271,8 @@ Shortest path to daily use.
    `PracticeArea` and `billingEntity`, build the page layout. Small, and it changes daily life
    immediately: staff can finally see what is happening with a client.
 2. **Bookings and calendars.** Mostly view configuration once the object exists.
-3. **Work logs**, with derived pre-fill.
+3. **Work logs**, with derived pre-fill. Object, views and the pre-fill function are built; the
+   form that consumes the pre-fill is not.
 4. **Inbox and AI qualification**, the highest value and the most work. See [`OMNICHANNEL.md`](./OMNICHANNEL.md).
 5. **Quotations, invoices, payments.** See [`FINANCE.md`](./FINANCE.md).
 
