@@ -134,8 +134,9 @@ Every field is a tax on the person entering it. This part is about where the tax
 The area where getting it wrong is most expensive, because it means two systems disagreeing about
 the same number. See `docs/FINANCE.md`.
 
-43. **Does TLLACC issue invoices today?** (O2 in `DECISIONS.md`. Ask this one first and get a plain
-    yes or no.) If yes, does it keep issuing them, or does that move?
+43. ~~Does TLLACC issue invoices today?~~ **Answered:** its financial side does not work, so nothing
+    does. Invoicing moves here. The live version of this question is now **who issues quotations**,
+    since FlowAccount produces those too and two numbered documents for one client is the same trap.
 44. Who produces a quotation now, and what does the client receive: PDF, a message, a spoken number?
 45. Between quotation and invoice, what changes? Are there deposits, staged payments, disbursements
     paid on the client's behalf?
@@ -199,7 +200,7 @@ restated here in plain language, so they can be answered in the same sitting.
 | # | In plain terms | What it changes |
 | --- | --- | --- |
 | O1 | Does TLLACC keep the record of how staff spend their time, or does that move here? | Whether work logs are the firm's timesheet or only client-facing work |
-| O2 | Does TLLACC issue invoices today? | Who owns invoicing. Two systems issuing them is the worst outcome |
+| ~~O2~~ | Answered: TLLACC's financial side does not work, so nothing issues invoices today. Invoicing moves here, against FlowAccount. |
 | O3 | Is a "Job" the same thing as a sales opportunity, or genuinely different? | Whether we keep relabelling Twenty's object or build our own |
 | O4 | Do staff need to search for clients by Thai name? | Whether we need a Thai tokenizer in the database |
 | O5 | How are bank transfer slips checked today, and by whom? | Whether verification is automated and at what cost |

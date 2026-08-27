@@ -6,6 +6,31 @@ Each entry says what was decided, why, what would reverse it, and what was verif
 
 ---
 
+## D15 — Quotations and invoices move here; FlowAccount keeps the ledger
+
+**Decided.** Closes O2. TLLACC has CRM, quotation and invoicing modules and **they do not work**:
+nothing financial runs in it today. So there is no second system issuing invoices and nothing to
+migrate away from. Quotation, then invoice, then payment, runs here against FlowAccount.
+
+**The order is the firm's order.** Quote first, invoice on acceptance. That is how they already work
+and there is no reason to invert it.
+
+**FlowAccount still owns the ledger** (D3, and rule 10 in `CLAUDE.md`). Our invoice carries an
+external reference to theirs; it never mirrors their numbers. Payments and their confirmation look
+like they come from FlowAccount's API, which keeps the money side in one place.
+
+**What is not decided.** Whether **quotations** are ours or FlowAccount's. FlowAccount issues
+quotations too, and this is the same shape of question O2 was: two systems producing a numbered
+document for the same client is the failure worth avoiding. The argument for ours is that a quotation
+is part of the conversation about a job and staff should not leave the CRM to produce one. Settle it
+before building either.
+
+**Gated on the account existing.** How much the FlowAccount API covers, its rate limit, and whether
+credentials are per billing entity or one per workspace are all unanswered and all shape the
+integration. See `FINANCE.md` §8.
+
+---
+
 ## D14 — Field placement is applied on install, not declared in the manifest
 
 **Decided.** No `defineViewField` files. `setup-firm.ts` reads `FIELD_PLACEMENTS` and applies each
@@ -402,7 +427,7 @@ putting to the owner in one sitting.
 | # | Question | Blocks |
 | --- | --- | --- |
 | O1 | Does TLLACC keep timesheets, or do work logs move here? | `WorkLog` design |
-| O2 | Does TLLACC currently issue invoices? Two systems issuing them is the failure mode. | Invoice ownership |
+| ~~O2~~ | **Answered.** TLLACC's financial side does not work, so nothing issues invoices today. See D15. | Closed |
 | O3 | Relabel `Opportunity` as Job, or build a separate `Job` object? | Start relabelled; split when it chafes |
 | O4 | Mostly answered by D10: a Latin name on every record makes Twenty's search work. What remains is whether staff want to type a **Thai** name into global search rather than a filter. | Search config |
 | O5 | Which slip verification provider, at what cost and failure rate? | Payment automation |

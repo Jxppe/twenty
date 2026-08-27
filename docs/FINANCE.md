@@ -136,6 +136,29 @@ These are page layouts with chart widgets over our objects. They need no separat
 Explicitly not here: profit and loss, balance sheet, cash flow statement. Those are accounting
 outputs.
 
+### Two kinds of number, and never mixing them
+
+The owner wants a monthly overview the accountant and the CEO can read without opening FlowAccount.
+That is reasonable and it is also the easiest way to end up with two systems quietly disagreeing,
+which rule 10 exists to prevent. The split that avoids it:
+
+**Operational figures, computed from our own records.** What we quoted, what was accepted, what is
+outstanding against a job, how long acceptance takes, which types of work convert. These describe our
+own activity, we are the source, and nothing else holds them.
+
+**Accounting figures, fetched from FlowAccount and displayed with the time they were fetched.**
+Revenue recognised, tax, anything that could be adjusted by a credit note, a write-off or a
+correction the accountant makes in FlowAccount. We must never recompute these from our invoice rows:
+the moment the accountant adjusts something there, our arithmetic is wrong and confidently so.
+
+Label them differently on the page. A number we computed and a number FlowAccount gave us are
+different kinds of claim, and a dashboard that blurs them is worse than no dashboard, because it will
+be believed.
+
+**Check FlowAccount's own dashboard before building ours.** If it already answers the monthly
+question well, the useful thing here is a link and a few operational numbers it cannot know, not a
+reimplementation.
+
 ---
 
 ## 5. Accounting provider integration
