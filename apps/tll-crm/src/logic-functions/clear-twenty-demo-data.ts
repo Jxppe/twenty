@@ -20,6 +20,11 @@ const SEED_RANGE_FILTER = {
   ],
 };
 
+// Soft delete only. The app's role sets `canDestroyAllObjectRecords: false` on
+// purpose, and permanent erasure is not a power worth handing an app in a firm
+// that may have to produce records years later. Soft-deleted rows are hidden
+// from every view, which is the whole of what this is for.
+//
 // Jobs before people and people before organizations: a row cannot go while
 // something still points at it.
 const TARGETS = [
@@ -77,21 +82,6 @@ const handler = async (
     } catch (error) {
       errors.push(`delete ${target.plural}: ${String(error)}`);
       continue;
-    }
-
-    // Soft delete only hides them. Destroy is what actually frees the names and
-    // stops them coming back in a deleted-records view.
-    try {
-      await client.mutation({
-        [`destroy${target.mutationPlural}`]: {
-          __args: { filter: SEED_RANGE_FILTER },
-          id: true,
-        },
-      });
-    } catch (error) {
-      errors.push(
-        `destroy ${target.plural} (soft delete succeeded): ${String(error)}`,
-      );
     }
 
     removed[target.plural] = await (async () => {

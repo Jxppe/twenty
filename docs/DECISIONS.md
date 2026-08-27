@@ -6,6 +6,30 @@ Each entry says what was decided, why, what would reverse it, and what was verif
 
 ---
 
+## D13 — The app soft-deletes, it never destroys
+
+**Decided.** `src/default-role.ts` keeps `canDestroyAllObjectRecords: false`. Nothing this app runs
+can permanently erase a record.
+
+**Why it came up.** Clearing Twenty's demo data hit
+`Entity performing the request does not have permission` on `destroyMany`, and the obvious fix was to
+grant the permission. That trade is wrong: a permanent, irreversible power over every client record,
+granted so a one-off cleanup could tidy itself.
+
+**Soft delete is enough for what we actually need.** A soft-deleted row is hidden from every view and
+every default query. The demo records went from 1,950 to invisible with the permission we already
+had.
+
+**A law firm is the wrong place to be casual about this.** Records may have to be produced years
+later, and "the app deleted it" is not a defence. If a record genuinely must be erased, that is a
+deliberate act by a person in the interface, with their name on it, not something a logic function
+can do in a loop.
+
+**What would reverse it.** A real requirement to erase on request, in which case it wants its own
+narrowly scoped role rather than a flag on the default one.
+
+---
+
 ## D12 — Plain English in the interface, not terms of art
 
 **Decided.** Interface words are chosen for someone reading English as a second language. Where a
