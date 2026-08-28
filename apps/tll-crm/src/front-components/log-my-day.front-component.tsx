@@ -3,10 +3,16 @@ import { defineFrontComponent } from 'twenty-sdk/define';
 import { enqueueSnackbar } from 'twenty-sdk/front-component';
 import { useTheme } from 'twenty-ui/theme-constants';
 
-import { createWorkLogs, fetchWorkLogDrafts } from 'src/api/work-logs';
+import {
+  createWorkLogs,
+  fetchPickerOptions,
+  fetchWorkLogDrafts,
+  type PickerOption,
+} from 'src/api/work-logs';
 import { LOG_MY_DAY_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER } from 'src/constants/universal-identifiers';
 import {
   blankLine,
+  idOf,
   isSaveable,
   type Line,
   minutesOf,
@@ -23,6 +29,8 @@ const LogMyDay = () => {
   const [workspaceMemberId, setWorkspaceMemberId] = useState<string | null>(
     null,
   );
+  const [clients, setClients] = useState<PickerOption[]>([]);
+  const [jobs, setJobs] = useState<PickerOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [savedCount, setSavedCount] = useState<number | null>(null);
@@ -33,14 +41,21 @@ const LogMyDay = () => {
     setIsLoading(true);
     setSavedCount(null);
 
-    void fetchWorkLogDrafts(workedOn)
-      .then((response) => {
+    void Promise.all([fetchWorkLogDrafts(workedOn), fetchPickerOptions()])
+      .then(([response, options]) => {
         if (isStale) {
           return;
         }
 
+        setClients(options.clients);
+        setJobs(options.jobs);
         setWorkspaceMemberId(response.workspaceMemberId);
-        setLines([...response.drafts.map(toLine), blankLine()]);
+        setLines([
+          ...response.drafts.map((draft, index) =>
+            toLine(draft, index, options.clients, options.jobs),
+          ),
+          blankLine(),
+        ]);
         setIsLoading(false);
       })
       .catch(() => {
@@ -75,9 +90,9 @@ const LogMyDay = () => {
         workedOn,
         minutes: minutesOf(line),
         staffId: workspaceMemberId,
-        matterId: line.matterId,
+        matterId: idOf(jobs, line.jobText),
         bookingId: line.bookingId,
-        personId: line.personId,
+        personId: idOf(clients, line.clientText),
         billingEntityId: line.billingEntityId,
       })),
     )
@@ -140,6 +155,17 @@ const LogMyDay = () => {
         />
       </div>
 
+      <datalist id="log-my-day-clients">
+        {clients.map((option) => (
+          <option key={option.id} value={option.label} />
+        ))}
+      </datalist>
+      <datalist id="log-my-day-jobs">
+        {jobs.map((option) => (
+          <option key={option.id} value={option.label} />
+        ))}
+      </datalist>
+
       {isLoading && (
         <span style={{ color: theme.font.color.tertiary }}>Loading…</span>
       )}
@@ -198,6 +224,26 @@ const LogMyDay = () => {
                 style={{ ...input, flex: 1 }}
               />
               <input
+                type="text"
+                list="log-my-day-clients"
+                value={line.clientText}
+                placeholder="Client"
+                onChange={(event) =>
+                  update(line.key, { clientText: event.target.value })
+                }
+                style={{ ...input, width: 150 }}
+              />
+              <input
+                type="text"
+                list="log-my-day-jobs"
+                value={line.jobText}
+                placeholder="Job"
+                onChange={(event) =>
+                  update(line.key, { jobText: event.target.value })
+                }
+                style={{ ...input, width: 150 }}
+              />
+              <input
                 type="number"
                 min={0}
                 step={5}
@@ -228,7 +274,7 @@ const LogMyDay = () => {
 
           {saveable.length < lines.length && (
             <span style={label}>
-              Lines without minutes are not saved.
+              Lines with nothing written in them are not saved.
             </span>
           )}
         </>

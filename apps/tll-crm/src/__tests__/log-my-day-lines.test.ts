@@ -1,6 +1,8 @@
 import {
   blankLine,
+  idOf,
   isSaveable,
+  labelOf,
   minutesOf,
   toLine,
 } from 'src/front-components/log-my-day-lines';
@@ -16,6 +18,13 @@ const draft = {
   source: 'BOOKING' as const,
 };
 
+const CLIENTS = [
+  { id: 'person-1', label: 'Martin Manning' },
+  { id: 'person-2', label: 'Wallop Srisai' },
+];
+
+const JOBS = [{ id: 'job-1', label: 'Land transfer, Jomtien' }];
+
 describe('what a day of work logs saves', () => {
   it('should carry a derived line through ready to save', () => {
     const line = toLine(draft, 0);
@@ -24,11 +33,11 @@ describe('what a day of work logs saves', () => {
     expect(isSaveable(line)).toBe(true);
   });
 
-  it('should leave out a line nobody put minutes on', () => {
+  it('should still save a line nobody put minutes on', () => {
     const line = toLine({ ...draft, minutes: null }, 0);
 
     expect(line.minutesText).toBe('');
-    expect(isSaveable(line)).toBe(false);
+    expect(isSaveable(line)).toBe(true);
   });
 
   it('should leave out the blank line at the bottom of the form', () => {
@@ -37,6 +46,24 @@ describe('what a day of work logs saves', () => {
 
   it('should leave out a line with minutes but nothing said', () => {
     expect(isSaveable({ ...toLine(draft, 0), description: '   ' })).toBe(false);
+  });
+
+  it('should show the names a derived line already carries', () => {
+    const line = toLine({ ...draft, personId: 'person-2' }, 0, CLIENTS, JOBS);
+
+    expect(line.clientText).toBe('Wallop Srisai');
+    expect(line.jobText).toBe('');
+  });
+
+  it('should match a typed name back to its record, ignoring case and space', () => {
+    expect(idOf(CLIENTS, '  martin manning ')).toBe('person-1');
+    expect(idOf(JOBS, 'Land transfer, Jomtien')).toBe('job-1');
+  });
+
+  it('should send nothing rather than guess at a name it does not know', () => {
+    expect(idOf(CLIENTS, 'Somebody Else')).toBe(null);
+    expect(idOf(CLIENTS, '')).toBe(null);
+    expect(labelOf(CLIENTS, null)).toBe('');
   });
 
   it('should read zero and nonsense as no answer rather than as a number', () => {
