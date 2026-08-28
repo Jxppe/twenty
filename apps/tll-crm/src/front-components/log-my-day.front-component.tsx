@@ -31,6 +31,7 @@ const LogMyDay = () => {
   );
   const [clients, setClients] = useState<PickerOption[]>([]);
   const [jobs, setJobs] = useState<PickerOption[]>([]);
+  const [categories, setCategories] = useState<PickerOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [savedCount, setSavedCount] = useState<number | null>(null);
@@ -49,6 +50,7 @@ const LogMyDay = () => {
 
         setClients(options.clients);
         setJobs(options.jobs);
+        setCategories(options.categories);
         setWorkspaceMemberId(response.workspaceMemberId);
         setLines([
           ...response.drafts.map((draft, index) =>
@@ -91,6 +93,7 @@ const LogMyDay = () => {
         workedOn,
         minutes: minutesOf(line),
         staffId: workspaceMemberId,
+        practiceAreaId: line.practiceAreaId,
         matterId: idOf(jobs, line.jobText),
         bookingId: line.bookingId,
         personId: idOf(clients, line.clientText),
@@ -212,27 +215,26 @@ const LogMyDay = () => {
                 paddingBottom: theme.spacing[2],
               }}
             >
-              <span style={{ ...label, width: 80 }}>
+              <span style={{ ...label, width: 74 }}>
                 {SOURCE_LABELS[line.source]}
               </span>
-              <input
-                type="text"
-                value={line.description}
-                placeholder="Anything else you did"
+              <select
+                value={line.practiceAreaId ?? ''}
                 onChange={(event) =>
-                  update(line.key, { description: event.target.value })
+                  update(line.key, {
+                    practiceAreaId:
+                      event.target.value === '' ? null : event.target.value,
+                  })
                 }
-                style={{ ...input, flex: 1 }}
-              />
-              <input
-                type="text"
-                value={line.notes}
-                placeholder="Notes"
-                onChange={(event) =>
-                  update(line.key, { notes: event.target.value })
-                }
-                style={{ ...input, flex: 1 }}
-              />
+                style={{ ...input, width: 170 }}
+              >
+                <option value="">Category</option>
+                {categories.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
               <input
                 type="text"
                 list="log-my-day-clients"
@@ -252,6 +254,24 @@ const LogMyDay = () => {
                   update(line.key, { jobText: event.target.value })
                 }
                 style={{ ...input, width: 150 }}
+              />
+              <input
+                type="text"
+                value={line.description}
+                placeholder="Anything else you did"
+                onChange={(event) =>
+                  update(line.key, { description: event.target.value })
+                }
+                style={{ ...input, flex: 1 }}
+              />
+              <input
+                type="text"
+                value={line.notes}
+                placeholder="Notes"
+                onChange={(event) =>
+                  update(line.key, { notes: event.target.value })
+                }
+                style={{ ...input, flex: 1 }}
               />
               <input
                 type="number"

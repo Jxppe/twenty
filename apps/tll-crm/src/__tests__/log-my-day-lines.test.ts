@@ -16,6 +16,7 @@ const draft = {
   bookingId: null,
   personId: null,
   billingEntityId: null,
+  practiceAreaId: null,
   source: 'BOOKING' as const,
 };
 

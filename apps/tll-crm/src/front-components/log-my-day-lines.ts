@@ -31,6 +31,7 @@ export const blankLine = (): Line => ({
   bookingId: null,
   personId: null,
   billingEntityId: null,
+  practiceAreaId: null,
   source: 'DEADLINE',
 });
 

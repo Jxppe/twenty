@@ -15,6 +15,7 @@ export type WorkLogInput = {
   workedOn: string;
   minutes: number;
   staffId: string;
+  practiceAreaId: string | null;
   matterId: string | null;
   bookingId: string | null;
   personId: string | null;
@@ -52,14 +53,19 @@ const PAGE = 500;
 export const fetchPickerOptions = async (): Promise<{
   clients: PickerOption[];
   jobs: PickerOption[];
+  categories: PickerOption[];
 }> => {
-  const [people, matters] = await Promise.all([
+  const [people, matters, areas] = await Promise.all([
     client.get<ListResponse<'people', PersonRecord>>('/rest/people', {
       query: { limit: PAGE, order_by: 'createdAt[DescNullsLast]' },
     }),
     client.get<ListResponse<'opportunities', MatterRecord>>(
       '/rest/opportunities',
       { query: { limit: PAGE, order_by: 'createdAt[DescNullsLast]' } },
+    ),
+    client.get<ListResponse<'practiceAreas', MatterRecord>>(
+      '/rest/practiceAreas',
+      { query: { limit: PAGE, order_by: 'name[AscNullsLast]' } },
     ),
   ]);
 
@@ -75,6 +81,9 @@ export const fetchPickerOptions = async (): Promise<{
       .filter((option) => option.label !== ''),
     jobs: (matters.data?.opportunities ?? [])
       .map((matter) => ({ id: matter.id, label: matter.name ?? '' }))
+      .filter((option) => option.label !== ''),
+    categories: (areas.data?.practiceAreas ?? [])
+      .map((area) => ({ id: area.id, label: area.name ?? '' }))
       .filter((option) => option.label !== ''),
   };
 };

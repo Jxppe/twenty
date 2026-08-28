@@ -19,6 +19,7 @@ export type WorkLogDraft = {
   bookingId: string | null;
   personId: string | null;
   billingEntityId: string | null;
+  practiceAreaId: string | null;
   source: 'BOOKING' | 'DEADLINE' | 'CONVERSATION';
 };
 
@@ -131,6 +132,7 @@ const handler = async (
       bookingId: booking.id ?? null,
       personId: booking.personId ?? null,
       billingEntityId: booking.billingEntityId ?? null,
+      practiceAreaId: null,
       source: 'BOOKING',
     });
   }
@@ -160,6 +162,7 @@ const handler = async (
       bookingId: null,
       personId: null,
       billingEntityId: null,
+      practiceAreaId: null,
       source: 'DEADLINE',
     });
   }
@@ -191,6 +194,7 @@ const handler = async (
       bookingId: null,
       personId: null,
       billingEntityId: null,
+      practiceAreaId: null,
       source: 'CONVERSATION',
     });
   }
