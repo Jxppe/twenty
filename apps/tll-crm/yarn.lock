@@ -2954,25 +2954,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tll-crm@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "tll-crm@workspace:."
-  dependencies:
-    "@types/node": "npm:^24.7.2"
-    "@types/react": "npm:^19.0.0"
-    "@typescript/native-preview": "npm:^7.0.0-dev.20260116.1"
-    oxlint: "npm:^0.16.0"
-    react: "npm:^19.0.0"
-    react-dom: "npm:^19.0.0"
-    twenty-client-sdk: "npm:2.35.0"
-    twenty-sdk: "npm:2.35.0"
-    twenty-ui: "npm:1.0.0-alpha.1"
-    typescript: "npm:^5.9.3"
-    vite-tsconfig-paths: "npm:^4.2.1"
-    vitest: "npm:^4.0.0"
-  languageName: unknown
-  linkType: soft
-
 "tar@npm:^7.5.4":
   version: 7.5.22
   resolution: "tar@npm:7.5.22"
@@ -3023,6 +3004,25 @@ __metadata:
   checksum: 10c0/f9d2743832c6191f753408f36224fe817620b8abcef572b2e570204c673a901d753ff84ca8e7b88f9c79e934295b3ffc6fcbc56a06f126e24e1ec6186dcad40d
   languageName: node
   linkType: hard
+
+"tll-crm@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "tll-crm@workspace:."
+  dependencies:
+    "@types/node": "npm:^24.7.2"
+    "@types/react": "npm:^19.0.0"
+    "@typescript/native-preview": "npm:^7.0.0-dev.20260116.1"
+    oxlint: "npm:^0.16.0"
+    react: "npm:^19.0.0"
+    react-dom: "npm:^19.0.0"
+    twenty-client-sdk: "npm:2.35.0"
+    twenty-sdk: "npm:2.35.0"
+    twenty-ui: "npm:1.0.0-alpha.1"
+    typescript: "npm:^5.9.3"
+    vite-tsconfig-paths: "npm:^4.2.1"
+    vitest: "npm:^4.0.0"
+  languageName: unknown
+  linkType: soft
 
 "tr46@npm:~0.0.3":
   version: 0.0.3
