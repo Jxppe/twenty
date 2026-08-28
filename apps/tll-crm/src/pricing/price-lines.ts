@@ -1,7 +1,4 @@
 import { CoreApiClient } from 'twenty-client-sdk/core';
-import { defineLogicFunction } from 'twenty-sdk/define';
-
-import { PRICE_QUOTATION_LINE_FUNCTION_UNIVERSAL_IDENTIFIER } from 'src/constants/universal-identifiers';
 
 type Money = { amountMicros?: number | null; currencyCode?: string | null };
 
@@ -194,16 +191,6 @@ const buildHandler = (kind: 'quotation' | 'invoice') => {
   };
 };
 
+export const buildQuotationLinePricer = () => buildHandler('quotation');
+
 export const buildInvoiceLinePricer = () => buildHandler('invoice');
-
-export const priceQuotationLine = defineLogicFunction({
-  universalIdentifier: PRICE_QUOTATION_LINE_FUNCTION_UNIVERSAL_IDENTIFIER,
-  name: 'price-quotation-line',
-  databaseEventTriggerSettings: {
-    eventName: 'quotationLineItem.*',
-    updatedFields: ['quantity', 'unitPrice', 'discount', 'taxRate', 'productId'],
-  },
-  handler: buildHandler('quotation'),
-});
-
-export default priceQuotationLine;
