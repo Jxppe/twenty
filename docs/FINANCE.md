@@ -61,6 +61,24 @@ so it is neither optional nor a category. It defaults down the chain
 | `person`, `company` | Relations to Twenty records |
 | `pdf` | `FILES` field |
 
+### Entering lines, and who does the arithmetic
+
+**The grid is Twenty's, not ours.** A one-to-many relation renders on the record page as a table you
+can add rows to and edit in place, with a working picker for relation fields. Building a spreadsheet
+front component would reimplement that inside a sandbox that cannot do floating menus, which is how
+the inbox dropdown failed. Open a quotation and use the Lines table before asking for anything more.
+
+**The arithmetic is ours, and it is not in the UI.** `price-quotation-line` and `price-invoice-line`
+run on a database event whenever a line changes:
+
+- Naming a service fills the blank description, price and tax rate from it. Values someone typed are
+  never overwritten, because a person who entered a number meant it.
+- `lineTotal` becomes quantity times price, less discount.
+- The document's `subtotal`, `tax` and `total` are recomputed from all its lines.
+
+Doing this on the event rather than in a form means it holds however the row arrived: typed,
+imported, or through the API. A UI-side calculator only works for people using that UI.
+
 ### QuotationLineItem
 
 Child object: `product`, `description`, `quantity`, `unitPrice`, `discount`, `taxRate`, `lineTotal`.
