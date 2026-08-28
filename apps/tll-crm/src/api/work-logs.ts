@@ -16,6 +16,7 @@ export type WorkLogInput = {
   minutes: number;
   staffId: string;
   practiceAreaId: string | null;
+  status: string;
   matterId: string | null;
   bookingId: string | null;
   personId: string | null;

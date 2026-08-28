@@ -4,8 +4,17 @@ import { type PickerOption, type WorkLogDraft } from 'src/api/work-logs';
 // renderer. Minutes are held as the raw input text, not a number: an empty box
 // and a zero are different answers, and parsing on every keystroke fights the
 // person typing.
+export const WORK_LOG_STATUSES = [
+  { value: 'NOT_STARTED', label: 'Not started' },
+  { value: 'IN_PROGRESS', label: 'In progress' },
+  { value: 'DONE', label: 'Done' },
+  { value: 'POSTPONED', label: 'Postponed' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+];
+
 export type Line = WorkLogDraft & {
   key: string;
+  status: string;
   minutesText: string;
   clientText: string;
   jobText: string;
@@ -25,6 +34,7 @@ export const blankLine = (): Line => ({
   notes: '',
   minutes: null,
   minutesText: '',
+  status: 'IN_PROGRESS',
   clientText: '',
   jobText: '',
   matterId: null,
@@ -64,6 +74,9 @@ export const toLine = (
   ...draft,
   key: `draft-${index}`,
   minutesText: draft.minutes === null ? '' : String(draft.minutes),
+  // A deadline the system saw completed is finished by definition; the rest
+  // of a day is usually another push at something still running.
+  status: draft.source === 'DEADLINE' ? 'DONE' : 'IN_PROGRESS',
   clientText: labelOf(clients, draft.personId),
   jobText: labelOf(jobs, draft.matterId),
 });

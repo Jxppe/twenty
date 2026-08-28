@@ -13,6 +13,7 @@ import { LOG_MY_DAY_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER } from 'src/constants/u
 import {
   blankLine,
   idOf,
+  WORK_LOG_STATUSES,
   isSaveable,
   type Line,
   minutesOf,
@@ -94,6 +95,7 @@ const LogMyDay = () => {
         minutes: minutesOf(line),
         staffId: workspaceMemberId,
         practiceAreaId: line.practiceAreaId,
+        status: line.status,
         matterId: idOf(jobs, line.jobText),
         bookingId: line.bookingId,
         personId: idOf(clients, line.clientText),
@@ -273,6 +275,19 @@ const LogMyDay = () => {
                 }
                 style={{ ...input, flex: 1 }}
               />
+              <select
+                value={line.status}
+                onChange={(event) =>
+                  update(line.key, { status: event.target.value })
+                }
+                style={{ ...input, width: 130 }}
+              >
+                {WORK_LOG_STATUSES.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
               <input
                 type="number"
                 min={0}

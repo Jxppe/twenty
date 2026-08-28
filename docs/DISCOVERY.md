@@ -152,6 +152,23 @@ the same number. See `docs/FINANCE.md`.
 ## Part 8. Trust, access and confidentiality
 
 51. Is there work that only certain people should see? Not "sensitive in general". Name a case.
+
+**The owner's provisional answer (2026-08-29): everyone can see everything, but a person should
+only be able to change their own work.** That needs confirming, because the two halves have very
+different prices. Read is free. Write-your-own-only is an Enterprise licence: VERIFIED in
+`row-level-permission-predicate.entity.ts`, which carries an `@license Enterprise` header and a
+`workspaceMemberFieldMetadataId` column — the predicate that means "records where this field is
+you". Object-level roles cannot express it; they are all-records-or-none per object.
+
+So the question to put to the owner is sharper than it looks:
+
+- **Has anyone actually edited someone else's record and caused a problem?** If not, this is a fear
+  rather than a requirement, and fears are cheaper to answer with a name than with a subscription.
+- **Would it be enough to see who changed something, rather than stop them?** `createdBy` and the
+  timeline already record every change against a person, for nothing. Prevention costs a licence;
+  attribution is already there.
+- **If prevention is genuinely wanted, which objects?** Work logs only is a much smaller claim than
+  every record in the firm, and it is the one that came up first.
 52. If yes: is it the whole job, or one document inside it? (O7. Job-level confidentiality needs
     row-level permissions, which are an Enterprise feature and therefore a cost. Document-level is
     cheaper. The answer decides whether we pay.)
@@ -205,7 +222,7 @@ restated here in plain language, so they can be answered in the same sitting.
 | O4 | Do staff need to search for clients by Thai name? | Whether we need a Thai tokenizer in the database |
 | O5 | How are bank transfer slips checked today, and by whom? | Whether verification is automated and at what cost |
 | O6 | Do clients book appointments themselves, or does staff do it for them? | Whether we build a booking page at all |
-| O7 | Is there work only some staff may see? | Whether we need row-level permissions, which cost money |
+| O7 | Is there work only some staff may see, and may a person change work that is not theirs? | Whether we need row-level permissions, which cost money. Half-answered: everything is visible to everyone, so the read side is free. "Only your own to edit" is the Enterprise half, and is not yet confirmed as a real requirement |
 
 ---
 

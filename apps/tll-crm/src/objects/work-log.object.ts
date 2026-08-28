@@ -5,6 +5,12 @@ import {
   WORK_LOG_IS_BILLABLE_FIELD_UNIVERSAL_IDENTIFIER,
   WORK_LOG_MINUTES_FIELD_UNIVERSAL_IDENTIFIER,
   WORK_LOG_NOTES_FIELD_UNIVERSAL_IDENTIFIER,
+  WORK_LOG_STATUS_CANCELLED_OPTION_ID,
+  WORK_LOG_STATUS_DONE_OPTION_ID,
+  WORK_LOG_STATUS_FIELD_UNIVERSAL_IDENTIFIER,
+  WORK_LOG_STATUS_IN_PROGRESS_OPTION_ID,
+  WORK_LOG_STATUS_NOT_STARTED_OPTION_ID,
+  WORK_LOG_STATUS_POSTPONED_OPTION_ID,
   WORK_LOG_OBJECT_UNIVERSAL_IDENTIFIER,
   WORK_LOG_WORKED_ON_FIELD_UNIVERSAL_IDENTIFIER,
 } from 'src/constants/universal-identifiers';
@@ -45,6 +51,54 @@ export default defineObject({
       label: 'Minutes',
       description: 'Minutes rather than hours: nobody rounds 20 minutes up to 0.5',
       icon: 'IconHourglass',
+    },
+    {
+      universalIdentifier: WORK_LOG_STATUS_FIELD_UNIVERSAL_IDENTIFIER,
+      type: FieldType.SELECT,
+      name: 'status',
+      label: 'Status',
+      description: 'Where this piece of work got to',
+      icon: 'IconProgressCheck',
+      // สถานะ. Their sheet is mostly กำลังดำเนินการ, because a line usually
+      // describes a push at something still running rather than a finish.
+      defaultValue: "'IN_PROGRESS'",
+      options: [
+        {
+          id: WORK_LOG_STATUS_NOT_STARTED_OPTION_ID,
+          value: 'NOT_STARTED',
+          label: 'Not started',
+          position: 0,
+          color: 'blue',
+        },
+        {
+          id: WORK_LOG_STATUS_IN_PROGRESS_OPTION_ID,
+          value: 'IN_PROGRESS',
+          label: 'In progress',
+          position: 1,
+          color: 'yellow',
+        },
+        {
+          id: WORK_LOG_STATUS_DONE_OPTION_ID,
+          value: 'DONE',
+          label: 'Done',
+          position: 2,
+          color: 'green',
+        },
+        {
+          id: WORK_LOG_STATUS_POSTPONED_OPTION_ID,
+          value: 'POSTPONED',
+          label: 'Postponed',
+          position: 3,
+          color: 'orange',
+        },
+        {
+          id: WORK_LOG_STATUS_CANCELLED_OPTION_ID,
+          value: 'CANCELLED',
+          label: 'Cancelled',
+          position: 4,
+          color: 'red',
+        },
+      ],
     },
     {
       universalIdentifier: WORK_LOG_NOTES_FIELD_UNIVERSAL_IDENTIFIER,
