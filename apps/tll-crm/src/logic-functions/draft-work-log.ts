@@ -83,7 +83,7 @@ const nodesOf = <TRow,>(
 const handler = async (
   payload: Payload,
   context: ExecutionContext,
-): Promise<{ drafts: WorkLogDraft[] }> => {
+): Promise<{ drafts: WorkLogDraft[]; workspaceMemberId: string | null }> => {
   // Drafting your own day is the normal case, so neither argument should have to
   // be typed. Passing them is for a manager filling in for someone who is out.
   const workspaceMemberId =
@@ -91,7 +91,7 @@ const handler = async (
   const workedOn = payload.workedOn ?? new Date().toISOString().slice(0, 10);
 
   if (workspaceMemberId === undefined) {
-    return { drafts: [] };
+    return { drafts: [], workspaceMemberId: null };
   }
 
   const client = new CoreApiClient();
@@ -195,11 +195,21 @@ const handler = async (
     });
   }
 
-  return { drafts };
+  // The form has to stamp `staffId` on what it writes, and no front-component
+  // hook exposes the workspace member. Returning the one we resolved saves the
+  // caller a lookup and guarantees the draft and the record agree on whose day
+  // this is.
+  return { drafts, workspaceMemberId };
 };
 
 export default defineLogicFunction({
   universalIdentifier: DRAFT_WORK_LOG_FUNCTION_UNIVERSAL_IDENTIFIER,
   name: 'draft-work-log',
+  description: 'The lines the system can already answer for one person on one day',
   handler,
+  httpRouteTriggerSettings: {
+    path: '/practice/draft-work-log',
+    httpMethod: 'POST',
+    isAuthRequired: true,
+  },
 });

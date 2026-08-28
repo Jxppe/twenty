@@ -13,7 +13,7 @@ export default defineNavigationMenuItem({
   universalIdentifier: UPCOMING_BOOKINGS_NAV_ITEM_UNIVERSAL_IDENTIFIER,
   name: 'Upcoming bookings',
   icon: 'IconCalendarEvent',
-  position: 3,
+  position: 4,
   type: NavigationMenuItemType.VIEW,
   viewUniversalIdentifier: UPCOMING_BOOKINGS_VIEW_UNIVERSAL_IDENTIFIER,
   folderUniversalIdentifier:

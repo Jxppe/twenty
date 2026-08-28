@@ -1,0 +1,263 @@
+import { useEffect, useState } from 'react';
+import { defineFrontComponent } from 'twenty-sdk/define';
+import { enqueueSnackbar } from 'twenty-sdk/front-component';
+import { useTheme } from 'twenty-ui/theme-constants';
+
+import { createWorkLogs, fetchWorkLogDrafts } from 'src/api/work-logs';
+import { LOG_MY_DAY_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER } from 'src/constants/universal-identifiers';
+import {
+  blankLine,
+  isSaveable,
+  type Line,
+  minutesOf,
+  SOURCE_LABELS,
+  today,
+  toLine,
+} from 'src/front-components/log-my-day-lines';
+import { Button } from 'src/ui/Button';
+
+const LogMyDay = () => {
+  const theme = useTheme();
+  const [workedOn, setWorkedOn] = useState(today);
+  const [lines, setLines] = useState<Line[]>([]);
+  const [workspaceMemberId, setWorkspaceMemberId] = useState<string | null>(
+    null,
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedCount, setSavedCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let isStale = false;
+
+    setIsLoading(true);
+    setSavedCount(null);
+
+    void fetchWorkLogDrafts(workedOn)
+      .then((response) => {
+        if (isStale) {
+          return;
+        }
+
+        setWorkspaceMemberId(response.workspaceMemberId);
+        setLines([...response.drafts.map(toLine), blankLine()]);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (!isStale) {
+          setLines([blankLine()]);
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isStale = true;
+    };
+  }, [workedOn]);
+
+  const update = (key: string, changes: Partial<Line>) =>
+    setLines((current) =>
+      current.map((line) => (line.key === key ? { ...line, ...changes } : line)),
+    );
+
+  const saveable = lines.filter(isSaveable);
+
+  const save = () => {
+    if (workspaceMemberId === null || saveable.length === 0) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    void createWorkLogs(
+      saveable.map((line) => ({
+        description: line.description.trim(),
+        workedOn,
+        minutes: minutesOf(line),
+        isBillable: line.isBillable,
+        staffId: workspaceMemberId,
+        matterId: line.matterId,
+        bookingId: line.bookingId,
+        personId: line.personId,
+        billingEntityId: line.billingEntityId,
+      })),
+    )
+      .then((created) => {
+        setSavedCount(created);
+        setIsSaving(false);
+        void enqueueSnackbar({
+          message: `Logged ${created} ${created === 1 ? 'entry' : 'entries'}`,
+          variant: 'success',
+        });
+      })
+      .catch(() => {
+        setIsSaving(false);
+        void enqueueSnackbar({
+          message: 'Could not save. Nothing after the failure was written.',
+          variant: 'error',
+        });
+      });
+  };
+
+  const label = {
+    color: theme.font.color.tertiary,
+    fontSize: theme.font.size.xs,
+  };
+
+  const input = {
+    background: theme.background.primary,
+    border: `1px solid ${theme.border.color.medium}`,
+    borderRadius: theme.border.radius.sm,
+    color: theme.font.color.primary,
+    fontFamily: theme.font.family,
+    fontSize: theme.font.size.sm,
+    padding: theme.spacing[1],
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: theme.font.family,
+        gap: theme.spacing[3],
+        padding: theme.spacing[4],
+      }}
+    >
+      <div
+        style={{
+          alignItems: 'center',
+          display: 'flex',
+          gap: theme.spacing[2],
+        }}
+      >
+        <span style={label}>Day</span>
+        <input
+          type="date"
+          value={workedOn}
+          max={today()}
+          onChange={(event) => setWorkedOn(event.target.value)}
+          style={input}
+        />
+      </div>
+
+      {isLoading && (
+        <span style={{ color: theme.font.color.tertiary }}>Loading…</span>
+      )}
+
+      {!isLoading && savedCount !== null && (
+        <div
+          style={{
+            color: theme.font.color.secondary,
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.spacing[2],
+          }}
+        >
+          <span>
+            Logged {savedCount} {savedCount === 1 ? 'entry' : 'entries'} for{' '}
+            {workedOn}.
+          </span>
+          <Button
+            title="Log more"
+            onClick={() => {
+              setSavedCount(null);
+              setLines([blankLine()]);
+            }}
+          />
+        </div>
+      )}
+
+      {!isLoading && savedCount === null && (
+        <>
+          <span style={label}>
+            These are the things the system already knows about. Say how long
+            each took, correct anything wrong, and add what is missing.
+          </span>
+
+          {lines.map((line) => (
+            <div
+              key={line.key}
+              style={{
+                alignItems: 'center',
+                borderBottom: `1px solid ${theme.border.color.light}`,
+                display: 'flex',
+                gap: theme.spacing[2],
+                paddingBottom: theme.spacing[2],
+              }}
+            >
+              <span style={{ ...label, width: 80 }}>
+                {SOURCE_LABELS[line.source]}
+              </span>
+              <input
+                type="text"
+                value={line.description}
+                placeholder="Anything else you did"
+                onChange={(event) =>
+                  update(line.key, { description: event.target.value })
+                }
+                style={{ ...input, flex: 1 }}
+              />
+              <input
+                type="number"
+                min={0}
+                step={5}
+                value={line.minutesText}
+                placeholder="min"
+                onChange={(event) =>
+                  update(line.key, { minutesText: event.target.value })
+                }
+                style={{ ...input, width: 72 }}
+              />
+              <label
+                style={{
+                  ...label,
+                  alignItems: 'center',
+                  display: 'flex',
+                  gap: theme.spacing[1],
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={line.isBillable}
+                  onChange={(event) =>
+                    update(line.key, { isBillable: event.target.checked })
+                  }
+                />
+                Billable
+              </label>
+            </div>
+          ))}
+
+          <div style={{ display: 'flex', gap: theme.spacing[2] }}>
+            <Button
+              title="Add a line"
+              onClick={() => setLines((current) => [...current, blankLine()])}
+            />
+            <Button
+              title={
+                isSaving ? 'Saving…' : `Save ${saveable.length} of ${lines.length}`
+              }
+              variant="primary"
+              isDisabled={isSaving || saveable.length === 0}
+              onClick={save}
+            />
+          </div>
+
+          {saveable.length < lines.length && (
+            <span style={label}>
+              Lines without minutes are not saved.
+            </span>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+export default defineFrontComponent({
+  universalIdentifier: LOG_MY_DAY_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER,
+  name: 'log-my-day',
+  description: 'The day’s work, pre-filled from what the system already knows',
+  component: LogMyDay,
+});

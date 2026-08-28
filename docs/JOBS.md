@@ -224,8 +224,12 @@ and minutes deliberately blank, because a guess there is worse than an empty box
 messages they handled, as one line rather than eleven. It returns drafts, not records: nothing is
 written until a person confirms it.
 
-The form on top of it is not built. When it is, it should open with these already filled in and one
-question outstanding per line.
+**Built:** `Log my day`, first item in the Work folder, because a screen opened every evening cannot
+be four clicks down. It opens on today with the derived lines already in it, one question outstanding
+per line, and a blank line at the bottom for what the system could not know. Minutes are the only
+thing it insists on: a line nobody put a number against is not written, and the button counts what it
+will save so the omission is visible rather than silent. It writes one work log per line against the
+staff member the draft resolved, so the draft and the record cannot disagree about whose day it was.
 
 ### Unresolved: TLLACC (O1)
 
@@ -287,8 +291,7 @@ Shortest path to daily use.
    `PracticeArea` and `billingEntity`, build the page layout. Small, and it changes daily life
    immediately: staff can finally see what is happening with a client.
 2. **Bookings and calendars.** Mostly view configuration once the object exists.
-3. **Work logs**, with derived pre-fill. Object, views and the pre-fill function are built; the
-   form that consumes the pre-fill is not.
+3. **Work logs**, with derived pre-fill. Built: object, views, the pre-fill function and the form.
 4. **Inbox and AI qualification**, the highest value and the most work. See [`OMNICHANNEL.md`](./OMNICHANNEL.md).
 5. **Quotations, invoices, payments.** See [`FINANCE.md`](./FINANCE.md).
 

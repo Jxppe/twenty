@@ -13,7 +13,7 @@ export default defineNavigationMenuItem({
   universalIdentifier: OUTSTANDING_DOCUMENTS_NAV_ITEM_UNIVERSAL_IDENTIFIER,
   name: 'Waiting on clients',
   icon: 'IconFileDescription',
-  position: 1,
+  position: 2,
   type: NavigationMenuItemType.VIEW,
   viewUniversalIdentifier: OUTSTANDING_DOCUMENTS_VIEW_UNIVERSAL_IDENTIFIER,
   folderUniversalIdentifier:

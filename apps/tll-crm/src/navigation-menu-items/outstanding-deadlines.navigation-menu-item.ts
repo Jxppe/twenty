@@ -13,7 +13,7 @@ export default defineNavigationMenuItem({
   universalIdentifier: DEADLINES_NAV_ITEM_UNIVERSAL_IDENTIFIER,
   name: 'Deadlines',
   icon: 'IconAlarm',
-  position: 0,
+  position: 1,
   type: NavigationMenuItemType.VIEW,
   viewUniversalIdentifier: DEADLINES_DUE_VIEW_UNIVERSAL_IDENTIFIER,
   folderUniversalIdentifier:

@@ -13,7 +13,7 @@ export default defineNavigationMenuItem({
   universalIdentifier: WORK_CALENDAR_NAV_ITEM_UNIVERSAL_IDENTIFIER,
   name: 'Work by day',
   icon: 'IconCalendar',
-  position: 5,
+  position: 6,
   type: NavigationMenuItemType.VIEW,
   viewUniversalIdentifier: WORK_CALENDAR_VIEW_UNIVERSAL_IDENTIFIER,
   folderUniversalIdentifier: PRACTICE_FOLDER_NAV_ITEM_UNIVERSAL_IDENTIFIER,

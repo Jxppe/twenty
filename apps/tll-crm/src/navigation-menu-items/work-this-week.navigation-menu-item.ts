@@ -13,7 +13,7 @@ export default defineNavigationMenuItem({
   universalIdentifier: WORK_THIS_WEEK_NAV_ITEM_UNIVERSAL_IDENTIFIER,
   name: 'Work this week',
   icon: 'IconClockEdit',
-  position: 4,
+  position: 5,
   type: NavigationMenuItemType.VIEW,
   viewUniversalIdentifier: WORK_THIS_WEEK_VIEW_UNIVERSAL_IDENTIFIER,
   folderUniversalIdentifier: PRACTICE_FOLDER_NAV_ITEM_UNIVERSAL_IDENTIFIER,
