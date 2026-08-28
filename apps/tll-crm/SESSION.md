@@ -56,7 +56,7 @@ whether a UUID bound is validated. The answer was always one grep away.
 
 ## When a run is red, in the order to look
 
-**1. Which step failed.** The Actions tab names it. The five steps fail for entirely different
+**1. Which step failed.** The Actions tab names it. Each step fails for entirely different
 reasons and reading the wrong one wastes the round trip.
 
 | Step | What a failure means |
@@ -65,16 +65,28 @@ reasons and reading the wrong one wastes the round trip.
 | `yarn install --immutable` | The lockfile does not match `package.json`, or its entries are out of sort order |
 | Typecheck / Lint | Ordinary code error. Nothing reached the CRM |
 | Point the CLI at the CRM | Wrong URL, revoked key, or Cloudflare Access blocking the runner |
-| What this would change / Apply metadata | A real metadata problem. **This is the interesting one** |
+| What this would change | The plan could not be computed. Usually a bad identifier or a malformed define |
+| Apply metadata | The sync itself was rejected. A real metadata problem. **This is the interesting one** |
 | Run the install hook | Expected to fail from CI. An API key cannot execute a logic function |
 
-**2. For a metadata failure, read the error code, not the message.** The CLI's wording misleads in
+**2. Both CRM steps print their phase, so read the last line, not the step name.** `plan` and
+`apply` run the same pipeline; `plan` stops before writing. Only the last phase is metadata.
+
+| Last line printed | What died |
+| --- | --- |
+| `Checking server...` | The CRM is unreachable. Tunnel or container, not your code |
+| `Building manifest...` / `Building application files...` | Bundling. A bad import or a missing dependency |
+| `Running typecheck...` | A type error the Typecheck step should have caught first. Check it ran |
+| `Computing metadata plan...` | A bad identifier or a malformed define |
+| `Syncing manifest...` | The server rejected the write. **This is the interesting one** |
+
+**3. For a metadata failure, read the error code, not the message.** The CLI's wording misleads in
 one specific way that cost this project several hours: it prints **"Authentication failed"** for a
 `FORBIDDEN` response as well as a real auth error (`api-client.ts:68`). A permissions problem
 therefore looks exactly like a bad key, and the natural response is to make another API key, which
 does nothing. If a key worked a moment ago for something else, the problem is permissions.
 
-**3. A partly-applied deploy is normal and safe to re-run.** The metadata plan is atomic, so a failed
+**4. A partly-applied deploy is normal and safe to re-run.** The metadata plan is atomic, so a failed
 apply changed nothing. The install hook is idempotent: it reads before writing, skips what is already
 correct, and reports rather than throwing.
 
@@ -106,6 +118,38 @@ Not everything, every time. These four catch most of what goes wrong:
 - **A quotation with a line.** Picking a service should fill the description and price and compute
   the totals. This exercises the only logic function that runs on a database event.
 - **Money in baht.** A new record showing a dollar sign means a currency field lost its default.
+
+---
+
+### Open: the quotation check above currently fails
+
+Measured against the live workspace on `36c957a0`, deploy run 5 green. A service at 15,000 with a
+description and tax rate 7, a quotation, and a line with quantity 2 and no price: `unitPrice`,
+`description`, `taxRate` and `lineTotal` all stayed empty, and the quotation's `subtotal`, `tax` and
+`total` stayed empty. Updating `quantity`, a field named in `updatedFields`, changed nothing either,
+so `priceQuotationLine` is not running at all rather than running and computing wrong.
+
+Ruled out, so do not spend the afternoon here again:
+
+- **Not the deploy.** Run 5's plan reads `0 to add, 19 to change`, so the function was already
+  registered by run 4.
+- **Not the wrong workspace.** The three `setup-firm` billing entities are present.
+- **Not the `updatedFields` filter.** `filterEventsByUpdatedFields` returns early unless
+  `operation === 'updated'`, so an `upserted` trigger passes everything through.
+- **Not a bogus event name.** `upserted` is a real `DatabaseEventAction`, and
+  `workspace-insert-query-builder.ts:264,275` emits both `created` and `upserted` on a plain insert.
+
+Those exclusions are read against upstream `main` in this monorepo, which is the gap: the deployed
+CRM may not be that build. What is left needs server-side visibility the connector does not give:
+
+1. Version skew, where the deployed Twenty does not emit `.upserted` on a plain insert.
+2. `CallDatabaseEventTriggerJobsJob` does a bare `continue` when the application has no
+   `applicationRegistrationId`, which would silently disable every database-event trigger in the app.
+3. The handler runs and throws, which is invisible from the record side.
+
+Cheapest next step: the worker log on crm.tllcrm.fyi while a line is written. No
+`LogicFunctionTriggerJob` entry points at 1 or 2; an entry that throws points at 3. Check the
+deployed Twenty version at the same time.
 
 ---
 
