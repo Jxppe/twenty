@@ -24,9 +24,9 @@ export default defineObject({
   fields: [
     { universalIdentifier: ILI_DESCRIPTION_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.TEXT, name: 'description', label: 'Description', icon: 'IconAbc' },
     { universalIdentifier: ILI_QUANTITY_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.NUMBER, name: 'quantity', label: 'Quantity', icon: 'IconStack', defaultValue: 1 },
-    { universalIdentifier: ILI_UNIT_PRICE_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.CURRENCY, name: 'unitPrice', label: 'Unit price', icon: 'IconCoin' },
-    { universalIdentifier: ILI_DISCOUNT_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.CURRENCY, name: 'discount', label: 'Discount', icon: 'IconDiscount' },
+    { universalIdentifier: ILI_UNIT_PRICE_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.CURRENCY, name: 'unitPrice', label: 'Unit price', icon: 'IconCoin', defaultValue: { amountMicros: null, currencyCode: "'THB'" } },
+    { universalIdentifier: ILI_DISCOUNT_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.CURRENCY, name: 'discount', label: 'Discount', icon: 'IconDiscount', defaultValue: { amountMicros: null, currencyCode: "'THB'" } },
     { universalIdentifier: ILI_TAX_RATE_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.NUMBER, name: 'taxRate', label: 'Tax rate', icon: 'IconPercentage' },
-    { universalIdentifier: ILI_LINE_TOTAL_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.CURRENCY, name: 'lineTotal', label: 'Line total', icon: 'IconSum' },
+    { universalIdentifier: ILI_LINE_TOTAL_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.CURRENCY, name: 'lineTotal', label: 'Line total', icon: 'IconSum', defaultValue: { amountMicros: null, currencyCode: "'THB'" } },
   ],
 });

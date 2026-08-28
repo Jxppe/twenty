@@ -135,6 +135,9 @@ Rules worth stating once:
 - **Numbering is per organization and gap-free.** Sequence allocation happens in a logic function
   under a lock, not client-side.
 - **Currency is per record**, defaulting to the organization's. `CURRENCY` fields carry the code.
+  Every currency field we own defaults to **THB**, and the install hook sets the same default on
+  Twenty's own `amount`. Without one a field falls back to the workspace default, which is USD, and a
+  quotation issued in the wrong currency is a worse error than most because nobody reads the symbol.
 
 ---
 

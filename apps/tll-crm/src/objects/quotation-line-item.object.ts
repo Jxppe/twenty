@@ -24,9 +24,9 @@ export default defineObject({
   fields: [
     { universalIdentifier: QLI_DESCRIPTION_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.TEXT, name: 'description', label: 'Description', icon: 'IconAbc' },
     { universalIdentifier: QLI_QUANTITY_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.NUMBER, name: 'quantity', label: 'Quantity', icon: 'IconStack', defaultValue: 1 },
-    { universalIdentifier: QLI_UNIT_PRICE_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.CURRENCY, name: 'unitPrice', label: 'Unit price', icon: 'IconCoin' },
-    { universalIdentifier: QLI_DISCOUNT_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.CURRENCY, name: 'discount', label: 'Discount', icon: 'IconDiscount' },
+    { universalIdentifier: QLI_UNIT_PRICE_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.CURRENCY, name: 'unitPrice', label: 'Unit price', icon: 'IconCoin', defaultValue: { amountMicros: null, currencyCode: "'THB'" } },
+    { universalIdentifier: QLI_DISCOUNT_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.CURRENCY, name: 'discount', label: 'Discount', icon: 'IconDiscount', defaultValue: { amountMicros: null, currencyCode: "'THB'" } },
     { universalIdentifier: QLI_TAX_RATE_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.NUMBER, name: 'taxRate', label: 'Tax rate', icon: 'IconPercentage' },
-    { universalIdentifier: QLI_LINE_TOTAL_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.CURRENCY, name: 'lineTotal', label: 'Line total', icon: 'IconSum' },
+    { universalIdentifier: QLI_LINE_TOTAL_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.CURRENCY, name: 'lineTotal', label: 'Line total', icon: 'IconSum', defaultValue: { amountMicros: null, currencyCode: "'THB'" } },
   ],
 });

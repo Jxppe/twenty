@@ -184,7 +184,7 @@ export default defineObject({
     },
     {
       universalIdentifier: BOOKING_FEE_FIELD_UNIVERSAL_IDENTIFIER,
-      type: FieldType.CURRENCY,
+      type: FieldType.CURRENCY, defaultValue: { amountMicros: null, currencyCode: "'THB'" } ,
       name: 'fee',
       label: 'Fee',
       description: 'Charged for the appointment itself, if anything',

@@ -59,6 +59,16 @@ const PRACTICE_AREAS = [
 // The firm files by client, so "Point of Contact" is both jargon (D12) and the
 // wrong emphasis: the client is the record, not a contact attached to a deal.
 // Field labels are editable on standard fields; names are not.
+// A CURRENCY field with no default falls back to the workspace default, which
+// is USD. The firm bills in baht, so Twenty's own amount field gets one too.
+const FIELD_DEFAULTS = [
+  {
+    objectNameSingular: 'opportunity',
+    fieldName: 'amount',
+    defaultValue: { amountMicros: null, currencyCode: "'THB'" },
+  },
+];
+
 const FIELD_RELABELS = [
   { objectNameSingular: 'opportunity', fieldName: 'pointOfContact', label: 'Client', icon: 'IconUser' },
   { objectNameSingular: 'opportunity', fieldName: 'company', label: 'Organization', icon: 'IconBuilding' },
@@ -117,6 +127,40 @@ const relabelStandardFields = async (): Promise<{
     }
 
     fieldsByObject.set(edge.node.nameSingular, byName);
+  }
+
+  for (const fieldDefault of FIELD_DEFAULTS) {
+    const target = fieldsByObject
+      .get(fieldDefault.objectNameSingular)
+      ?.get(fieldDefault.fieldName);
+
+    if (target === undefined) {
+      fieldRelabelErrors.push(
+        `${fieldDefault.objectNameSingular}.${fieldDefault.fieldName}: not found`,
+      );
+      continue;
+    }
+
+    try {
+      await client.mutation({
+        updateOneField: {
+          __args: {
+            input: {
+              id: target.id,
+              update: { defaultValue: fieldDefault.defaultValue },
+            },
+          },
+          id: true,
+        },
+      });
+      fieldsRelabelled.push(
+        `${fieldDefault.objectNameSingular}.${fieldDefault.fieldName} -> THB`,
+      );
+    } catch (caught) {
+      fieldRelabelErrors.push(
+        `${fieldDefault.objectNameSingular}.${fieldDefault.fieldName} default: ${caught instanceof Error ? caught.message : String(caught)}`,
+      );
+    }
   }
 
   for (const relabel of FIELD_RELABELS) {

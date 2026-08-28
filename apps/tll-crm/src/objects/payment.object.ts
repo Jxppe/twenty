@@ -32,7 +32,7 @@ export default defineObject({
   labelIdentifierFieldMetadataUniversalIdentifier: PAYMENT_REFERENCE_FIELD_UNIVERSAL_IDENTIFIER,
   fields: [
     { universalIdentifier: PAYMENT_REFERENCE_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.TEXT, name: 'reference', label: 'Reference', description: 'Slip reference or transaction id, as the client sent it', icon: 'IconHash' },
-    { universalIdentifier: PAYMENT_AMOUNT_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.CURRENCY, name: 'amount', label: 'Amount', icon: 'IconCoin' },
+    { universalIdentifier: PAYMENT_AMOUNT_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.CURRENCY, name: 'amount', label: 'Amount', icon: 'IconCoin', defaultValue: { amountMicros: null, currencyCode: "'THB'" } },
     { universalIdentifier: PAYMENT_PAID_AT_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.DATE_TIME, name: 'paidAt', label: 'Paid', icon: 'IconCalendarCheck' },
     { universalIdentifier: PAYMENT_EXTERNAL_REFERENCE_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.TEXT, name: 'externalReference', label: 'FlowAccount ref', icon: 'IconExternalLink' },
     { universalIdentifier: PAYMENT_NOTES_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.TEXT, name: 'notes', label: 'Notes', icon: 'IconNote' },

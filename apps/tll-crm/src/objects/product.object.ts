@@ -31,7 +31,7 @@ export default defineObject({
     { universalIdentifier: PRODUCT_NAME_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.TEXT, name: 'name', label: 'Service', icon: 'IconAbc' },
     { universalIdentifier: PRODUCT_CODE_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.TEXT, name: 'code', label: 'Code', description: 'Optional short reference used on documents', icon: 'IconHash' },
     { universalIdentifier: PRODUCT_DESCRIPTION_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.TEXT, name: 'description', label: 'Description', description: 'Copied onto a quotation line as its starting text', icon: 'IconFileText' },
-    { universalIdentifier: PRODUCT_UNIT_PRICE_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.CURRENCY, name: 'unitPrice', label: 'Price', icon: 'IconCoin' },
+    { universalIdentifier: PRODUCT_UNIT_PRICE_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.CURRENCY, name: 'unitPrice', label: 'Price', icon: 'IconCoin', defaultValue: { amountMicros: null, currencyCode: "'THB'" } },
     { universalIdentifier: PRODUCT_TAX_RATE_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.NUMBER, name: 'taxRate', label: 'Tax rate', description: 'Percent. Twenty has no tax concept, so this is ours', icon: 'IconPercentage' },
     { universalIdentifier: PRODUCT_CATEGORY_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.TEXT, name: 'category', label: 'Category', icon: 'IconCategory' },
     { universalIdentifier: PRODUCT_IS_ACTIVE_FIELD_UNIVERSAL_IDENTIFIER, type: FieldType.BOOLEAN, name: 'isActive', label: 'Offered', description: 'Turn off to retire it. Old documents must keep resolving', icon: 'IconCircleCheck', defaultValue: true },
