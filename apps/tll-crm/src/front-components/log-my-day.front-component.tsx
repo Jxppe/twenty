@@ -4,9 +4,11 @@ import { enqueueSnackbar } from 'twenty-sdk/front-component';
 import { useTheme } from 'twenty-ui/theme-constants';
 
 import {
+  createClient,
   createWorkLogs,
   fetchPickerOptions,
   fetchWorkLogDrafts,
+  type JobOption,
   type PickerOption,
 } from 'src/api/work-logs';
 import { LOG_MY_DAY_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER } from 'src/constants/universal-identifiers';
@@ -14,6 +16,7 @@ import {
   blankLine,
   idOf,
   isDerived,
+  isUnmatched,
   WORK_LOG_STATUSES,
   isSaveable,
   type Line,
@@ -33,7 +36,7 @@ const LogMyDay = () => {
     null,
   );
   const [clients, setClients] = useState<PickerOption[]>([]);
-  const [jobs, setJobs] = useState<PickerOption[]>([]);
+  const [jobs, setJobs] = useState<JobOption[]>([]);
   const [categories, setCategories] = useState<PickerOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -79,6 +82,43 @@ const LogMyDay = () => {
     setLines((current) =>
       current.map((line) => (line.key === key ? { ...line, ...changes } : line)),
     );
+
+  // The job already knows whose it is. Filling the client from it saves the
+  // typing and, more to the point, stops the two disagreeing.
+  const pickJob = (line: Line, jobText: string) => {
+    const picked = jobs.find(
+      (job) => job.label.toLowerCase() === jobText.trim().toLowerCase(),
+    );
+    const client =
+      picked === undefined || picked.clientId === null
+        ? undefined
+        : clients.find((option) => option.id === picked.clientId);
+
+    update(line.key, {
+      jobText,
+      ...(client !== undefined && line.clientText.trim() === ''
+        ? { clientText: client.label }
+        : {}),
+    });
+  };
+
+  const addClient = (line: Line) => {
+    void createClient(line.clientText)
+      .then((created) => {
+        setClients((current) => [...current, created]);
+        update(line.key, { clientText: created.label });
+        void enqueueSnackbar({
+          message: `Added ${created.label} to People`,
+          variant: 'success',
+        });
+      })
+      .catch(() => {
+        void enqueueSnackbar({
+          message: 'Could not add that client.',
+          variant: 'error',
+        });
+      });
+  };
 
   const saveable = lines.filter(isSaveable);
 
@@ -201,6 +241,7 @@ const LogMyDay = () => {
     .tll-daylog-col-num { text-align: right; }
     .tll-daylog-mark { align-self: stretch; }
     .tll-daylog-mark-derived { background: var(--tll-accent); }
+    .tll-daylog-row-new .tll-daylog-field::placeholder { font-style: italic; }
     .tll-daylog-cell { border-bottom: 1px solid var(--tll-line); padding: 3px 4px; }
     .tll-daylog-field {
       background: transparent;
@@ -222,6 +263,30 @@ const LogMyDay = () => {
       outline: none;
     }
     .tll-daylog-field::placeholder { color: var(--tll-fg-3); }
+    .tll-daylog-field-unmatched { border-color: ${theme.color.red}; }
+    .tll-daylog-cell-pick { align-items: center; display: flex; gap: 4px; }
+    .tll-daylog-add {
+      background: transparent;
+      border: 1px solid ${theme.color.red};
+      border-radius: ${theme.border.radius.sm};
+      color: ${theme.color.red};
+      cursor: pointer;
+      flex: none;
+      font-family: inherit;
+      font-size: ${theme.font.size.xs};
+      padding: 3px 6px;
+    }
+    .tll-daylog-add:hover { background: var(--tll-bg); }
+    /* Their notes run to three or four lines. field-sizing grows the box where
+       it is supported and is ignored where it is not, leaving a two-line box
+       that still scrolls, so nothing is ever hidden without a scrollbar. */
+    .tll-daylog-text {
+      field-sizing: content;
+      line-height: 1.45;
+      max-height: 140px;
+      min-height: 30px;
+      resize: vertical;
+    }
     .tll-daylog-foot {
       align-items: center;
       border-top: 1px solid var(--tll-line);
@@ -354,9 +419,13 @@ const LogMyDay = () => {
                       ))}
                     </select>
                   </div>
-                  <div className="tll-daylog-cell">
+                  <div className="tll-daylog-cell tll-daylog-cell-pick">
                     <input
-                      className="tll-daylog-field"
+                      className={
+                        isUnmatched(clients, line.clientText)
+                          ? 'tll-daylog-field tll-daylog-field-unmatched'
+                          : 'tll-daylog-field'
+                      }
                       type="text"
                       list="log-my-day-clients"
                       value={line.clientText}
@@ -364,22 +433,34 @@ const LogMyDay = () => {
                         update(line.key, { clientText: event.target.value })
                       }
                     />
+                    {isUnmatched(clients, line.clientText) && (
+                      <button
+                        className="tll-daylog-add"
+                        type="button"
+                        title={`Add ${line.clientText.trim()} to People`}
+                        onClick={() => addClient(line)}
+                      >
+                        Add
+                      </button>
+                    )}
                   </div>
                   <div className="tll-daylog-cell">
                     <input
-                      className="tll-daylog-field"
+                      className={
+                        isUnmatched(jobs, line.jobText)
+                          ? 'tll-daylog-field tll-daylog-field-unmatched'
+                          : 'tll-daylog-field'
+                      }
                       type="text"
                       list="log-my-day-jobs"
                       value={line.jobText}
-                      onChange={(event) =>
-                        update(line.key, { jobText: event.target.value })
-                      }
+                      onChange={(event) => pickJob(line, event.target.value)}
                     />
                   </div>
                   <div className="tll-daylog-cell">
-                    <input
-                      className="tll-daylog-field tll-daylog-field-main"
-                      type="text"
+                    <textarea
+                      className="tll-daylog-field tll-daylog-field-main tll-daylog-text"
+                      rows={1}
                       value={line.description}
                       placeholder={
                         isDerived(line) ? '' : 'Anything else you did'
@@ -390,9 +471,9 @@ const LogMyDay = () => {
                     />
                   </div>
                   <div className="tll-daylog-cell">
-                    <input
-                      className="tll-daylog-field"
-                      type="text"
+                    <textarea
+                      className="tll-daylog-field tll-daylog-text"
+                      rows={1}
                       value={line.notes}
                       onChange={(event) =>
                         update(line.key, { notes: event.target.value })

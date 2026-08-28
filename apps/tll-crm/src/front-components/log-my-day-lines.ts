@@ -1,4 +1,8 @@
-import { type PickerOption, type WorkLogDraft } from 'src/api/work-logs';
+import {
+  type JobOption,
+  type PickerOption,
+  type WorkLogDraft,
+} from 'src/api/work-logs';
 
 // Split out of the component so what gets written can be tested without a
 // renderer. Minutes are held as the raw input text, not a number: an empty box
@@ -48,6 +52,14 @@ export const blankLine = (): Line => ({
   source: 'OWN',
 });
 
+// Typed, non-empty, and matching no record. The name would otherwise be
+// dropped on save without saying so, which is how a client's history ends
+// up with holes in it.
+export const isUnmatched = (
+  options: PickerOption[],
+  label: string,
+): boolean => label.trim() !== '' && idOf(options, label) === null;
+
 export const labelOf = (
   options: PickerOption[],
   id: string | null,
@@ -72,7 +84,7 @@ export const toLine = (
   draft: WorkLogDraft,
   index: number,
   clients: PickerOption[] = [],
-  jobs: PickerOption[] = [],
+  jobs: JobOption[] = [],
 ): Line => ({
   ...draft,
   key: `draft-${index}`,

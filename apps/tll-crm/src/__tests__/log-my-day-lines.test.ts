@@ -2,6 +2,7 @@ import {
   blankLine,
   idOf,
   isSaveable,
+  isUnmatched,
   labelOf,
   minutesOf,
   toLine,
@@ -25,7 +26,9 @@ const CLIENTS = [
   { id: 'person-2', label: 'Wallop Srisai' },
 ];
 
-const JOBS = [{ id: 'job-1', label: 'Land transfer, Jomtien' }];
+const JOBS = [
+  { id: 'job-1', label: 'Land transfer, Jomtien', clientId: 'person-2' },
+];
 
 describe('what a day of work logs saves', () => {
   it('should carry a derived line through ready to save', () => {
@@ -60,6 +63,13 @@ describe('what a day of work logs saves', () => {
   it('should match a typed name back to its record, ignoring case and space', () => {
     expect(idOf(CLIENTS, '  martin manning ')).toBe('person-1');
     expect(idOf(JOBS, 'Land transfer, Jomtien')).toBe('job-1');
+  });
+
+  it('should call out a typed name that matches no record', () => {
+    expect(isUnmatched(CLIENTS, 'Somebody Else')).toBe(true);
+    expect(isUnmatched(CLIENTS, 'Martin Manning')).toBe(false);
+    // An empty box is not an error, it is just empty.
+    expect(isUnmatched(CLIENTS, '   ')).toBe(false);
   });
 
   it('should send nothing rather than guess at a name it does not know', () => {
