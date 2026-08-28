@@ -22,6 +22,7 @@ export const today = (): string => new Date().toISOString().slice(0, 10);
 export const blankLine = (): Line => ({
   key: `own-${Date.now()}-${Math.random()}`,
   description: '',
+  notes: '',
   minutes: null,
   minutesText: '',
   clientText: '',

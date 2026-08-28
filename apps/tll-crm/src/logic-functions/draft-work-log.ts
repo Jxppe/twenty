@@ -13,6 +13,7 @@ type Payload = {
 
 export type WorkLogDraft = {
   description: string;
+  notes: string;
   minutes: number | null;
   matterId: string | null;
   bookingId: string | null;
@@ -124,6 +125,7 @@ const handler = async (
   for (const booking of nodesOf<BookingRow>(bookings, 'bookings')) {
     drafts.push({
       description: booking.title ?? 'Appointment',
+      notes: '',
       minutes: minutesBetween(booking.startsAt, booking.endsAt),
       matterId: booking.matterId ?? null,
       bookingId: booking.id ?? null,
@@ -150,6 +152,7 @@ const handler = async (
   for (const deadline of nodesOf<DeadlineRow>(deadlines, 'matterDeadlines')) {
     drafts.push({
       description: `Completed: ${deadline.title ?? 'deadline'}`,
+      notes: '',
       // Nothing in the record says how long it took, and a guess here would be
       // worse than a blank the person has to fill in.
       minutes: null,
@@ -182,6 +185,7 @@ const handler = async (
   if (handled.length > 0) {
     drafts.push({
       description: `Client messages: ${handled.length} conversation${handled.length === 1 ? '' : 's'}`,
+      notes: '',
       minutes: null,
       matterId: null,
       bookingId: null,

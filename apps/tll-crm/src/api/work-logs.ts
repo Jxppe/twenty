@@ -11,6 +11,7 @@ export type PickerOption = { id: string; label: string };
 
 export type WorkLogInput = {
   description: string;
+  notes: string;
   workedOn: string;
   minutes: number;
   staffId: string;

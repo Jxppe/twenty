@@ -87,6 +87,7 @@ const LogMyDay = () => {
     void createWorkLogs(
       saveable.map((line) => ({
         description: line.description.trim(),
+        notes: line.notes.trim(),
         workedOn,
         minutes: minutesOf(line),
         staffId: workspaceMemberId,
@@ -220,6 +221,15 @@ const LogMyDay = () => {
                 placeholder="Anything else you did"
                 onChange={(event) =>
                   update(line.key, { description: event.target.value })
+                }
+                style={{ ...input, flex: 1 }}
+              />
+              <input
+                type="text"
+                value={line.notes}
+                placeholder="Notes"
+                onChange={(event) =>
+                  update(line.key, { notes: event.target.value })
                 }
                 style={{ ...input, flex: 1 }}
               />

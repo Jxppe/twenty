@@ -4,6 +4,7 @@ import {
   WORK_LOG_DESCRIPTION_FIELD_UNIVERSAL_IDENTIFIER,
   WORK_LOG_IS_BILLABLE_FIELD_UNIVERSAL_IDENTIFIER,
   WORK_LOG_MINUTES_FIELD_UNIVERSAL_IDENTIFIER,
+  WORK_LOG_NOTES_FIELD_UNIVERSAL_IDENTIFIER,
   WORK_LOG_OBJECT_UNIVERSAL_IDENTIFIER,
   WORK_LOG_WORKED_ON_FIELD_UNIVERSAL_IDENTIFIER,
 } from 'src/constants/universal-identifiers';
@@ -44,6 +45,16 @@ export default defineObject({
       label: 'Minutes',
       description: 'Minutes rather than hours: nobody rounds 20 minutes up to 0.5',
       icon: 'IconHourglass',
+    },
+    {
+      universalIdentifier: WORK_LOG_NOTES_FIELD_UNIVERSAL_IDENTIFIER,
+      type: FieldType.TEXT,
+      name: 'notes',
+      label: 'Notes',
+      // Not a longer description. It is what someone else needs to know:
+      // waiting on the lawyer, the client has not replied, sent for checking.
+      description: 'Where it stands, for whoever reads this next',
+      icon: 'IconNotes',
     },
     {
       universalIdentifier: WORK_LOG_IS_BILLABLE_FIELD_UNIVERSAL_IDENTIFIER,
