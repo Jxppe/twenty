@@ -67,6 +67,11 @@ All of this, declared as TypeScript and synced with the CLI. Verified against
   one and not the other (`isCustom` in 2.35, `isSystem` in 2.34) typechecks at build and fails at
   runtime. Query only what both versions have, or keep the versions in step.
 
+- **An API key cannot execute a logic function.** `executeOneLogicFunction` takes `@AuthUser()`,
+  which throws `ForbiddenException` with "This endpoint requires a user and won't work with just an
+  API key". Metadata sync works fine with a key, so CI can deploy but cannot run the install hook.
+  Worse, the CLI reports that `FORBIDDEN` as "Authentication failed" (`api-client.ts:68`), so it
+  looks like a bad key and sends you round in circles making new ones.
 - **`dev` does not run install hooks.** It syncs metadata, nothing else, so a
   `definePostInstallLogicFunction` never fires during development however many times you sync.
   MEASURED: seeded records absent and standard-object relabels not applied, with no error anywhere.

@@ -64,5 +64,23 @@ jobs:
       - name: Apply metadata
         run: yarn twenty apply
 
-      - name: Run the install hook
+      # An API key cannot execute a logic function: executeOneLogicFunction takes
+      # @AuthUser(), which throws "This endpoint requires a user and won't work
+      # with just an API key". The CLI reports that FORBIDDEN as an
+      # authentication failure, which reads as a bad key and is not.
+      #
+      # So this is best-effort. The metadata above is the deploy; the hook only
+      # matters when a relabel, a field placement or the firm seed changes, and
+      # it is idempotent, so running it by hand afterwards costs nothing.
+      - name: Run the install hook (needs a user, may not work from CI)
+        continue-on-error: true
         run: yarn twenty dev:function:exec --postInstall
+
+      - name: Say what to do if the hook did not run
+        if: always()
+        run: |
+          echo "Metadata is deployed. If the install hook step above failed with"
+          echo "an authentication error, that is expected from CI: it needs a user"
+          echo "token, not an API key. Run it locally only when a relabel, a field"
+          echo "placement or the firm seed has changed:"
+          echo "  cd apps/tll-crm && twenty dev:function:exec --postInstall"

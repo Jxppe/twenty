@@ -27,6 +27,20 @@ under the repository's Actions tab if something looks wrong.
 
 The key never goes in the repository. It is read from the secret at run time and nothing prints it.
 
+**The install hook cannot run from CI.** Executing a logic function requires a *user*:
+`executeOneLogicFunction` takes `@AuthUser()`, and that decorator throws "This endpoint requires a
+user and won't work with just an API key". The CLI surfaces that `FORBIDDEN` as "Authentication
+failed", which reads as a bad key and is not one. So the deploy applies metadata and marks the hook
+step as best-effort.
+
+Run it by hand only when a relabel, a field placement or the firm seed has changed. It is idempotent,
+so an unnecessary run costs a second:
+
+```
+cd C:\Users\jespe\Documents\GitHub\twenty\apps\tll-crm
+twenty dev:function:exec --postInstall
+```
+
 **If Cloudflare Access sits in front of the CRM**, GitHub's runners will be blocked by it, since they
 have no browser to log in with. Either leave `/rest` and `/graphql` outside Access, or issue an Access
 service token. The deploy failing at "Point the CLI at the CRM" with an authentication error is what
