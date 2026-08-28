@@ -14,19 +14,18 @@ import {
 import { LOG_MY_DAY_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER } from 'src/constants/universal-identifiers';
 import {
   blankLine,
-  idOf,
   isDerived,
-  isUnmatched,
-  WORK_LOG_STATUSES,
   isSaveable,
   type Line,
   minutesOf,
   SOURCE_LABELS,
   today,
   toLine,
+  WORK_LOG_STATUSES,
 } from 'src/front-components/log-my-day-lines';
 import { brandAccent } from 'src/constants/brand';
 import { Button } from 'src/ui/Button';
+import { RecordPicker, recordPickerCss } from 'src/ui/RecordPicker';
 
 const LogMyDay = () => {
   const theme = useTheme();
@@ -58,12 +57,7 @@ const LogMyDay = () => {
         setJobs(options.jobs);
         setCategories(options.categories);
         setWorkspaceMemberId(response.workspaceMemberId);
-        setLines([
-          ...response.drafts.map((draft, index) =>
-            toLine(draft, index, options.clients, options.jobs),
-          ),
-          blankLine(),
-        ]);
+        setLines([...response.drafts.map(toLine), blankLine()]);
         setIsLoading(false);
       })
       .catch(() => {
@@ -85,28 +79,22 @@ const LogMyDay = () => {
 
   // The job already knows whose it is. Filling the client from it saves the
   // typing and, more to the point, stops the two disagreeing.
-  const pickJob = (line: Line, jobText: string) => {
-    const picked = jobs.find(
-      (job) => job.label.toLowerCase() === jobText.trim().toLowerCase(),
-    );
-    const client =
-      picked === undefined || picked.clientId === null
-        ? undefined
-        : clients.find((option) => option.id === picked.clientId);
+  const pickJob = (line: Line, matterId: string | null) => {
+    const picked = jobs.find((job) => job.id === matterId);
 
     update(line.key, {
-      jobText,
-      ...(client !== undefined && line.clientText.trim() === ''
-        ? { clientText: client.label }
+      matterId,
+      ...(picked?.clientId != null && line.personId === null
+        ? { personId: picked.clientId }
         : {}),
     });
   };
 
-  const addClient = (line: Line) => {
-    void createClient(line.clientText)
+  const addClient = (line: Line, name: string) => {
+    void createClient(name)
       .then((created) => {
         setClients((current) => [...current, created]);
-        update(line.key, { clientText: created.label });
+        update(line.key, { personId: created.id });
         void enqueueSnackbar({
           message: `Added ${created.label} to People`,
           variant: 'success',
@@ -138,9 +126,9 @@ const LogMyDay = () => {
         staffId: workspaceMemberId,
         practiceAreaId: line.practiceAreaId,
         status: line.status,
-        matterId: idOf(jobs, line.jobText),
+        matterId: line.matterId,
         bookingId: line.bookingId,
-        personId: idOf(clients, line.clientText),
+        personId: line.personId,
         billingEntityId: line.billingEntityId,
       })),
     )
@@ -219,7 +207,10 @@ const LogMyDay = () => {
       max-width: 380px;
       text-align: right;
     }
-    .tll-daylog-scroll { flex: 1; overflow: auto; padding: 0 20px; }
+    /* No overflow here: an absolutely positioned picker menu cannot escape a
+       clipping ancestor, and nothing can be measured from a worker to place it
+       anywhere else. A day is a handful of rows, so the page scrolls instead. */
+    .tll-daylog-scroll { flex: 1; padding: 0 20px; }
     .tll-daylog-grid {
       align-items: center;
       display: grid;
@@ -263,20 +254,6 @@ const LogMyDay = () => {
       outline: none;
     }
     .tll-daylog-field::placeholder { color: var(--tll-fg-3); }
-    .tll-daylog-field-unmatched { border-color: ${theme.color.red}; }
-    .tll-daylog-cell-pick { align-items: center; display: flex; gap: 4px; }
-    .tll-daylog-add {
-      background: transparent;
-      border: 1px solid ${theme.color.red};
-      border-radius: ${theme.border.radius.sm};
-      color: ${theme.color.red};
-      cursor: pointer;
-      flex: none;
-      font-family: inherit;
-      font-size: ${theme.font.size.xs};
-      padding: 3px 6px;
-    }
-    .tll-daylog-add:hover { background: var(--tll-bg); }
     /* Their notes run to three or four lines. field-sizing grows the box where
        it is supported and is ignored where it is not, leaving a two-line box
        that still scrolls, so nothing is ever hidden without a scrollbar. */
@@ -308,6 +285,7 @@ const LogMyDay = () => {
       .tll-daylog-grid { grid-template-columns: 3px 1fr 1fr; }
       .tll-daylog-col { display: none; }
     }
+    ${recordPickerCss(theme)}
   `;
 
   const columns = [
@@ -323,17 +301,6 @@ const LogMyDay = () => {
   return (
     <div className="tll-daylog">
       <style>{css}</style>
-
-      <datalist id="log-my-day-clients">
-        {clients.map((option) => (
-          <option key={option.id} value={option.label} />
-        ))}
-      </datalist>
-      <datalist id="log-my-day-jobs">
-        {jobs.map((option) => (
-          <option key={option.id} value={option.label} />
-        ))}
-      </datalist>
 
       <div className="tll-daylog-head">
         <h1 className="tll-daylog-title">Log my day</h1>
@@ -419,42 +386,22 @@ const LogMyDay = () => {
                       ))}
                     </select>
                   </div>
-                  <div className="tll-daylog-cell tll-daylog-cell-pick">
-                    <input
-                      className={
-                        isUnmatched(clients, line.clientText)
-                          ? 'tll-daylog-field tll-daylog-field-unmatched'
-                          : 'tll-daylog-field'
-                      }
-                      type="text"
-                      list="log-my-day-clients"
-                      value={line.clientText}
-                      onChange={(event) =>
-                        update(line.key, { clientText: event.target.value })
-                      }
+                  <div className="tll-daylog-cell">
+                    <RecordPicker
+                      options={clients}
+                      value={line.personId}
+                      placeholder="Client"
+                      onPick={(personId) => update(line.key, { personId })}
+                      onCreate={(name) => addClient(line, name)}
+                      createLabel="Add client"
                     />
-                    {isUnmatched(clients, line.clientText) && (
-                      <button
-                        className="tll-daylog-add"
-                        type="button"
-                        title={`Add ${line.clientText.trim()} to People`}
-                        onClick={() => addClient(line)}
-                      >
-                        Add
-                      </button>
-                    )}
                   </div>
                   <div className="tll-daylog-cell">
-                    <input
-                      className={
-                        isUnmatched(jobs, line.jobText)
-                          ? 'tll-daylog-field tll-daylog-field-unmatched'
-                          : 'tll-daylog-field'
-                      }
-                      type="text"
-                      list="log-my-day-jobs"
-                      value={line.jobText}
-                      onChange={(event) => pickJob(line, event.target.value)}
+                    <RecordPicker
+                      options={jobs}
+                      value={line.matterId}
+                      placeholder="Job"
+                      onPick={(matterId) => pickJob(line, matterId)}
                     />
                   </div>
                   <div className="tll-daylog-cell">

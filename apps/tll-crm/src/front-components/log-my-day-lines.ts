@@ -1,8 +1,4 @@
-import {
-  type JobOption,
-  type PickerOption,
-  type WorkLogDraft,
-} from 'src/api/work-logs';
+import { type WorkLogDraft } from 'src/api/work-logs';
 
 // Split out of the component so what gets written can be tested without a
 // renderer. Minutes are held as the raw input text, not a number: an empty box
@@ -20,8 +16,6 @@ export type Line = WorkLogDraft & {
   key: string;
   status: string;
   minutesText: string;
-  clientText: string;
-  jobText: string;
 };
 
 export const SOURCE_LABELS: Record<WorkLogDraft['source'], string> = {
@@ -42,8 +36,6 @@ export const blankLine = (): Line => ({
   minutes: null,
   minutesText: '',
   status: 'IN_PROGRESS',
-  clientText: '',
-  jobText: '',
   matterId: null,
   bookingId: null,
   personId: null,
@@ -52,48 +44,13 @@ export const blankLine = (): Line => ({
   source: 'OWN',
 });
 
-// Typed, non-empty, and matching no record. The name would otherwise be
-// dropped on save without saying so, which is how a client's history ends
-// up with holes in it.
-export const isUnmatched = (
-  options: PickerOption[],
-  label: string,
-): boolean => label.trim() !== '' && idOf(options, label) === null;
-
-export const labelOf = (
-  options: PickerOption[],
-  id: string | null,
-): string => options.find((option) => option.id === id)?.label ?? '';
-
-// Names are matched back to ids case-insensitively on the exact label. Two
-// clients with identical names resolve to whichever the API returned first,
-// which is the price of a native `<input list>` over a hand-rolled combobox.
-export const idOf = (options: PickerOption[], label: string): string | null => {
-  const wanted = label.trim().toLowerCase();
-
-  if (wanted === '') {
-    return null;
-  }
-
-  return (
-    options.find((option) => option.label.toLowerCase() === wanted)?.id ?? null
-  );
-};
-
-export const toLine = (
-  draft: WorkLogDraft,
-  index: number,
-  clients: PickerOption[] = [],
-  jobs: JobOption[] = [],
-): Line => ({
+export const toLine = (draft: WorkLogDraft, index: number): Line => ({
   ...draft,
   key: `draft-${index}`,
   minutesText: draft.minutes === null ? '' : String(draft.minutes),
   // A deadline the system saw completed is finished by definition; the rest
   // of a day is usually another push at something still running.
   status: draft.source === 'DEADLINE' ? 'DONE' : 'IN_PROGRESS',
-  clientText: labelOf(clients, draft.personId),
-  jobText: labelOf(jobs, draft.matterId),
 });
 
 export const minutesOf = (line: Line): number => {

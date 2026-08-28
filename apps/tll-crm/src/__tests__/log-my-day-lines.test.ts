@@ -1,9 +1,7 @@
 import {
   blankLine,
-  idOf,
+  isDerived,
   isSaveable,
-  isUnmatched,
-  labelOf,
   minutesOf,
   toLine,
 } from 'src/front-components/log-my-day-lines';
@@ -20,15 +18,6 @@ const draft = {
   practiceAreaId: null,
   source: 'BOOKING' as const,
 };
-
-const CLIENTS = [
-  { id: 'person-1', label: 'Martin Manning' },
-  { id: 'person-2', label: 'Wallop Srisai' },
-];
-
-const JOBS = [
-  { id: 'job-1', label: 'Land transfer, Jomtien', clientId: 'person-2' },
-];
 
 describe('what a day of work logs saves', () => {
   it('should carry a derived line through ready to save', () => {
@@ -53,29 +42,16 @@ describe('what a day of work logs saves', () => {
     expect(isSaveable({ ...toLine(draft, 0), description: '   ' })).toBe(false);
   });
 
-  it('should show the names a derived line already carries', () => {
-    const line = toLine({ ...draft, personId: 'person-2' }, 0, CLIENTS, JOBS);
+  it('should keep the records a derived line already points at', () => {
+    const line = toLine({ ...draft, personId: 'person-2' }, 0);
 
-    expect(line.clientText).toBe('Wallop Srisai');
-    expect(line.jobText).toBe('');
+    expect(line.personId).toBe('person-2');
+    expect(line.matterId).toBe(null);
+    expect(isDerived(line)).toBe(true);
   });
 
-  it('should match a typed name back to its record, ignoring case and space', () => {
-    expect(idOf(CLIENTS, '  martin manning ')).toBe('person-1');
-    expect(idOf(JOBS, 'Land transfer, Jomtien')).toBe('job-1');
-  });
-
-  it('should call out a typed name that matches no record', () => {
-    expect(isUnmatched(CLIENTS, 'Somebody Else')).toBe(true);
-    expect(isUnmatched(CLIENTS, 'Martin Manning')).toBe(false);
-    // An empty box is not an error, it is just empty.
-    expect(isUnmatched(CLIENTS, '   ')).toBe(false);
-  });
-
-  it('should send nothing rather than guess at a name it does not know', () => {
-    expect(idOf(CLIENTS, 'Somebody Else')).toBe(null);
-    expect(idOf(CLIENTS, '')).toBe(null);
-    expect(labelOf(CLIENTS, null)).toBe('');
+  it('should mark a line added by hand as not derived', () => {
+    expect(isDerived(blankLine())).toBe(false);
   });
 
   it('should read zero and nonsense as no answer rather than as a number', () => {
