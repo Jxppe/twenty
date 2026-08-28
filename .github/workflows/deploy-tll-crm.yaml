@@ -51,6 +51,14 @@ jobs:
 
       - run: yarn install --immutable
 
+      # Before anything touches the CRM. A type error reaching the metadata sync
+      # is a half-applied deploy; caught here it is a red build and nothing else.
+      - name: Typecheck
+        run: yarn typecheck
+
+      - name: Lint
+        run: yarn lint
+
       - name: Point the CLI at the CRM
         env:
           URL: ${{ secrets.TLL_CRM_URL }}
@@ -58,6 +66,11 @@ jobs:
         run: |
           yarn twenty remote:add --url "$URL" --as ci --api-key "$KEY"
           yarn twenty remote:use ci
+
+      # Shows the plan before applying it, so a failed run says what it was about
+      # to change rather than only that it failed.
+      - name: What this would change
+        run: yarn twenty plan
 
       # No --force. A deploy that would drop a field or an object should fail
       # loudly and wait for a person, not take the data with it.
