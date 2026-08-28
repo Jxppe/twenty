@@ -11,7 +11,6 @@ export type WorkLogInput = {
   description: string;
   workedOn: string;
   minutes: number;
-  isBillable: boolean;
   staffId: string;
   matterId: string | null;
   bookingId: string | null;

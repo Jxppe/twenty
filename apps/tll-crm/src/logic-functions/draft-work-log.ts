@@ -14,7 +14,6 @@ type Payload = {
 export type WorkLogDraft = {
   description: string;
   minutes: number | null;
-  isBillable: boolean;
   matterId: string | null;
   bookingId: string | null;
   personId: string | null;
@@ -126,7 +125,6 @@ const handler = async (
     drafts.push({
       description: booking.title ?? 'Appointment',
       minutes: minutesBetween(booking.startsAt, booking.endsAt),
-      isBillable: true,
       matterId: booking.matterId ?? null,
       bookingId: booking.id ?? null,
       personId: booking.personId ?? null,
@@ -155,7 +153,6 @@ const handler = async (
       // Nothing in the record says how long it took, and a guess here would be
       // worse than a blank the person has to fill in.
       minutes: null,
-      isBillable: true,
       matterId: deadline.matterId ?? null,
       bookingId: null,
       personId: null,
@@ -186,7 +183,6 @@ const handler = async (
     drafts.push({
       description: `Client messages: ${handled.length} conversation${handled.length === 1 ? '' : 's'}`,
       minutes: null,
-      isBillable: false,
       matterId: null,
       bookingId: null,
       personId: null,

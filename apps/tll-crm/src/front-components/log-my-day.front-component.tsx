@@ -74,7 +74,6 @@ const LogMyDay = () => {
         description: line.description.trim(),
         workedOn,
         minutes: minutesOf(line),
-        isBillable: line.isBillable,
         staffId: workspaceMemberId,
         matterId: line.matterId,
         bookingId: line.bookingId,
@@ -209,23 +208,6 @@ const LogMyDay = () => {
                 }
                 style={{ ...input, width: 72 }}
               />
-              <label
-                style={{
-                  ...label,
-                  alignItems: 'center',
-                  display: 'flex',
-                  gap: theme.spacing[1],
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={line.isBillable}
-                  onChange={(event) =>
-                    update(line.key, { isBillable: event.target.checked })
-                  }
-                />
-                Billable
-              </label>
             </div>
           ))}
 

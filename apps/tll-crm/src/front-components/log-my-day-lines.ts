@@ -19,7 +19,6 @@ export const blankLine = (): Line => ({
   description: '',
   minutes: null,
   minutesText: '',
-  isBillable: true,
   matterId: null,
   bookingId: null,
   personId: null,

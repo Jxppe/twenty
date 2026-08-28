@@ -9,7 +9,6 @@ import { describe, expect, it } from 'vitest';
 const draft = {
   description: 'Consultation with Khun Somchai',
   minutes: 45,
-  isBillable: true,
   matterId: null,
   bookingId: null,
   personId: null,
