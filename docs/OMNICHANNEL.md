@@ -118,6 +118,40 @@ Deliberately not objects yet.
 - Tags start as `MULTI_SELECT`. Promote when they need their own metadata.
 - Teams have no Twenty primitive; roles are the nearest thing. Row-level rules are Enterprise (O7).
 
+## Embedding Takdai's chat inside the CRM
+
+VERIFIED against the renderer. A front component **can** render an `<iframe>`: the host routes it to a
+dedicated sandboxing renderer (`host-component-registry.ts:86`) and enforces a sandbox attribute
+rather than refusing the element (`sanitizeIframeSandbox.ts`). Twenty sets no CSP restricting
+`frame-src`, so an external origin loads.
+
+The default sandbox is `allow-scripts allow-forms allow-popups`. Permanently denied, whatever the
+component asks for: `allow-same-origin`, every form of top-navigation, and
+`allow-popups-to-escape-sandbox`.
+
+**`allow-same-origin` being denied is the whole design constraint.** The frame runs in an opaque
+origin, so inside it there are no cookies, no `localStorage`, no `sessionStorage` and no IndexedDB.
+
+**The "no realtime" rule does not apply here.** It constrains the front component's own worker code.
+An iframe is a real browser frame running Takdai's app with its own network stack, so WebSockets and
+SSE work normally inside it.
+
+So Takdai has to be built to satisfy four things, all cheap to design in and expensive to retrofit:
+
+- **Frameable.** No `X-Frame-Options: DENY`, and `frame-ancestors https://crm.tllcrm.fyi` in its CSP.
+- **Authenticated by a short-lived token in the URL**, never a cookie. The CRM mints it in a logic
+  function from the signed-in workspace member, so staff do not log in twice and the token carries
+  who they are.
+- **No browser storage.** Session state lives in memory for the life of the frame. A reload is a new
+  token.
+- **`postMessage` origin is the string `null`.** If the two sides talk, the token is the identity;
+  the origin cannot be.
+
+**This does not justify a second product.** D4 keeps messaging in Takdai because one messaging
+codebase serving several products is far less work than two, and a firm is just a tenant. Building a
+separate omnichannel for this firm alone would double the surface that has to be maintained to avoid
+a constraint that is four bullet points long.
+
 ### Attachment
 
 Not designed. Likely a `FILES` field on Message rather than an object, since that type already

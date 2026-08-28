@@ -99,7 +99,9 @@ channels, payment methods, accounting providers. Not for CRUD.
 - `theme.spacing` is a token record: `theme.spacing[2]`, not `theme.spacing(2)`.
 - Import enums from `twenty-sdk/define`, not `twenty-shared/types`.
 - `navigate()` takes an `AppPath` enum member with named params, not a URL.
-- Front components are sandboxed: no portals, no `ResizeObserver`, no canvas, no realtime.
+- Front components are sandboxed: no portals, no `ResizeObserver`, no canvas, no realtime. An
+  `<iframe>` **is** allowed and gets a host-enforced sandbox; `allow-same-origin` is always stripped,
+  so a framed app has no cookies or storage, but its own realtime transport works normally.
 - Twenty cannot index Thai text (`to_tsvector('simple', ...)`). Search Thai names in our own
   screens with `contains` filters, not through the search endpoint.
 - `th-TH` is not in `AppLocales.ts`, and app translations are typed `Partial<Record<AppLocale, ...>>`,
