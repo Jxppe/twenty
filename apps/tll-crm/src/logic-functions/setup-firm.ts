@@ -47,13 +47,33 @@ const BILLING_ENTITIES = [
 
 // The default that stops anyone having to think about which company bills a
 // matter: notarization is Pattaya Notary, registrations are Unique X.
-const PRACTICE_AREAS = [
+//
+// The list is the firm's own, taken from the category dropdown in the work
+// report they kept before this: งานคดี/ศาล is Litigation, งาน DBD is Company
+// registration, งานพินัยกรรม is Estate and wills, งานจดทะเบียนกรมที่ดิน is
+// Property, Notary is Notarization. Ours were broader and already covered
+// those; the seven below are the ones we had missed.
+//
+// The last four are not areas of practice at all. They are where the day goes
+// when it does not go on a client, and staff have always logged them here, so
+// the list is a list of kinds of work rather than kinds of law. Nothing bills
+// them, hence no entity.
+const PRACTICE_AREAS: { name: string; billingEntity?: string }[] = [
   { name: 'Visa and immigration', billingEntity: 'Thailiving Law' },
   { name: 'Property', billingEntity: 'Thailiving Law' },
   { name: 'Litigation', billingEntity: 'Thailiving Law' },
   { name: 'Estate and wills', billingEntity: 'Thailiving Law' },
   { name: 'Company registration', billingEntity: 'Unique X Services' },
   { name: 'Notarization', billingEntity: 'Pattaya Notary' },
+  { name: 'Contracts', billingEntity: 'Thailiving Law' },
+  { name: 'Due diligence', billingEntity: 'Thailiving Law' },
+  // งาน LED. The Legal Execution Department is where a judgment is enforced,
+  // so it follows litigation rather than standing on its own.
+  { name: 'Legal Execution Department', billingEntity: 'Thailiving Law' },
+  { name: 'Office' },
+  { name: 'Finance and accounting' },
+  { name: 'Marketing' },
+  { name: 'Meetings' },
 ];
 
 // The firm files by client, so "Point of Contact" is both jargon (D12) and the
@@ -334,7 +354,10 @@ const seedFirmStructure = async (): Promise<{
       continue;
     }
 
-    const defaultBillingEntityId = entityIdByName.get(area.billingEntity);
+    const defaultBillingEntityId =
+      area.billingEntity === undefined
+        ? undefined
+        : entityIdByName.get(area.billingEntity);
 
     await client.mutation({
       createPracticeArea: {
