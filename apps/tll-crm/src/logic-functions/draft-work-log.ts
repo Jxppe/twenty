@@ -20,7 +20,9 @@ export type WorkLogDraft = {
   personId: string | null;
   billingEntityId: string | null;
   practiceAreaId: string | null;
-  source: 'BOOKING' | 'DEADLINE' | 'CONVERSATION';
+  // OWN is never returned from here. It is what the form marks a line the
+  // person added themselves, so the two kinds stay tellable apart.
+  source: 'BOOKING' | 'DEADLINE' | 'CONVERSATION' | 'OWN';
 };
 
 const MINUTE = 60_000;

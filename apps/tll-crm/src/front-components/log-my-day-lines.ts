@@ -24,7 +24,10 @@ export const SOURCE_LABELS: Record<WorkLogDraft['source'], string> = {
   BOOKING: 'Appointment',
   DEADLINE: 'Deadline',
   CONVERSATION: 'Messages',
+  OWN: '',
 };
+
+export const isDerived = (line: Line): boolean => line.source !== 'OWN';
 
 export const today = (): string => new Date().toISOString().slice(0, 10);
 
@@ -42,7 +45,7 @@ export const blankLine = (): Line => ({
   personId: null,
   billingEntityId: null,
   practiceAreaId: null,
-  source: 'DEADLINE',
+  source: 'OWN',
 });
 
 export const labelOf = (

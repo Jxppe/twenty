@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { defineFrontComponent } from 'twenty-sdk/define';
 import { enqueueSnackbar } from 'twenty-sdk/front-component';
 import { useTheme } from 'twenty-ui/theme-constants';
@@ -13,6 +13,7 @@ import { LOG_MY_DAY_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER } from 'src/constants/u
 import {
   blankLine,
   idOf,
+  isDerived,
   WORK_LOG_STATUSES,
   isSaveable,
   type Line,
@@ -21,6 +22,7 @@ import {
   today,
   toLine,
 } from 'src/front-components/log-my-day-lines';
+import { brandAccent } from 'src/constants/brand';
 import { Button } from 'src/ui/Button';
 
 const LogMyDay = () => {
@@ -119,47 +121,143 @@ const LogMyDay = () => {
       });
   };
 
-  const label = {
-    color: theme.font.color.tertiary,
-    fontSize: theme.font.size.xs,
-  };
+  // The page sits inside Twenty's own chrome, beside its record tables, so it
+  // has to read as part of the product rather than as a form bolted onto it.
+  // Twenty's tables carry no per-cell borders: text sits on the row and a
+  // control only draws itself once you are in it. A stylesheet rather than
+  // inline styles, because focus and hover cannot be expressed inline.
+  //
+  // Front-component CSS lands in the host page unscoped, so every selector is
+  // prefixed and none of them names a bare element.
+  const css = `
+    .tll-daylog {
+      --tll-fg: ${theme.font.color.primary};
+      --tll-fg-2: ${theme.font.color.secondary};
+      --tll-fg-3: ${theme.font.color.tertiary};
+      --tll-line: ${theme.border.color.light};
+      --tll-line-strong: ${theme.border.color.medium};
+      --tll-bg: ${theme.background.primary};
+      --tll-accent: ${brandAccent(theme)};
+      color: var(--tll-fg);
+      display: flex;
+      flex-direction: column;
+      font-family: ${theme.font.family};
+      height: 100%;
+    }
+    .tll-daylog-head {
+      align-items: baseline;
+      border-bottom: 1px solid var(--tll-line);
+      display: flex;
+      gap: 12px;
+      padding: 16px 20px 12px;
+    }
+    .tll-daylog-title {
+      font-size: ${theme.font.size.lg};
+      font-weight: ${theme.font.weight.semiBold};
+      letter-spacing: -0.01em;
+      margin: 0;
+    }
+    .tll-daylog-date {
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: ${theme.border.radius.sm};
+      color: var(--tll-fg-2);
+      font-family: inherit;
+      font-size: ${theme.font.size.sm};
+      padding: 2px 4px;
+    }
+    .tll-daylog-date:hover { border-color: var(--tll-line-strong); }
+    .tll-daylog-date:focus {
+      background: var(--tll-bg);
+      border-color: var(--tll-accent);
+      outline: none;
+    }
+    .tll-daylog-said {
+      color: var(--tll-fg-3);
+      font-size: ${theme.font.size.sm};
+      margin-left: auto;
+      max-width: 380px;
+      text-align: right;
+    }
+    .tll-daylog-scroll { flex: 1; overflow: auto; padding: 0 20px; }
+    .tll-daylog-grid {
+      align-items: center;
+      display: grid;
+      grid-template-columns: 3px 150px 150px 150px minmax(180px, 1.4fr) minmax(140px, 1fr) 124px 64px;
+    }
+    .tll-daylog-col {
+      background: var(--tll-bg);
+      border-bottom: 1px solid var(--tll-line);
+      color: var(--tll-fg-3);
+      font-size: ${theme.font.size.xs};
+      font-weight: ${theme.font.weight.medium};
+      letter-spacing: 0.04em;
+      padding: 10px 8px;
+      position: sticky;
+      text-transform: uppercase;
+      top: 0;
+      z-index: 1;
+    }
+    .tll-daylog-col-num { text-align: right; }
+    .tll-daylog-mark { align-self: stretch; }
+    .tll-daylog-mark-derived { background: var(--tll-accent); }
+    .tll-daylog-cell { border-bottom: 1px solid var(--tll-line); padding: 3px 4px; }
+    .tll-daylog-field {
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: ${theme.border.radius.sm};
+      color: var(--tll-fg-2);
+      font-family: inherit;
+      font-size: ${theme.font.size.sm};
+      padding: 5px 4px;
+      width: 100%;
+    }
+    .tll-daylog-field-main { color: var(--tll-fg); }
+    .tll-daylog-field-num { font-variant-numeric: tabular-nums; text-align: right; }
+    .tll-daylog-field:hover { border-color: var(--tll-line); }
+    .tll-daylog-field:focus {
+      background: var(--tll-bg);
+      border-color: var(--tll-accent);
+      color: var(--tll-fg);
+      outline: none;
+    }
+    .tll-daylog-field::placeholder { color: var(--tll-fg-3); }
+    .tll-daylog-foot {
+      align-items: center;
+      border-top: 1px solid var(--tll-line);
+      display: flex;
+      gap: 8px;
+      padding: 12px 20px;
+    }
+    .tll-daylog-count {
+      color: var(--tll-fg-3);
+      font-size: ${theme.font.size.sm};
+      margin-left: auto;
+    }
+    .tll-daylog-empty {
+      color: var(--tll-fg-3);
+      font-size: ${theme.font.size.sm};
+      padding: 24px 20px;
+    }
+    @media (max-width: 900px) {
+      .tll-daylog-grid { grid-template-columns: 3px 1fr 1fr; }
+      .tll-daylog-col { display: none; }
+    }
+  `;
 
-  const input = {
-    background: theme.background.primary,
-    border: `1px solid ${theme.border.color.medium}`,
-    borderRadius: theme.border.radius.sm,
-    color: theme.font.color.primary,
-    fontFamily: theme.font.family,
-    fontSize: theme.font.size.sm,
-    padding: theme.spacing[1],
-  };
+  const columns = [
+    'Category',
+    'Client',
+    'Job',
+    'What you did',
+    'Notes',
+    'Status',
+    'Minutes',
+  ];
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        fontFamily: theme.font.family,
-        gap: theme.spacing[3],
-        padding: theme.spacing[4],
-      }}
-    >
-      <div
-        style={{
-          alignItems: 'center',
-          display: 'flex',
-          gap: theme.spacing[2],
-        }}
-      >
-        <span style={label}>Day</span>
-        <input
-          type="date"
-          value={workedOn}
-          max={today()}
-          onChange={(event) => setWorkedOn(event.target.value)}
-          style={input}
-        />
-      </div>
+    <div className="tll-daylog">
+      <style>{css}</style>
 
       <datalist id="log-my-day-clients">
         {clients.map((option) => (
@@ -172,19 +270,27 @@ const LogMyDay = () => {
         ))}
       </datalist>
 
-      {isLoading && (
-        <span style={{ color: theme.font.color.tertiary }}>Loading…</span>
-      )}
+      <div className="tll-daylog-head">
+        <h1 className="tll-daylog-title">Log my day</h1>
+        <input
+          className="tll-daylog-date"
+          type="date"
+          value={workedOn}
+          max={today()}
+          onChange={(event) => setWorkedOn(event.target.value)}
+        />
+        {!isLoading && savedCount === null && (
+          <span className="tll-daylog-said">
+            Filled in from your bookings and the deadlines you closed. Correct
+            what is wrong, add what is missing.
+          </span>
+        )}
+      </div>
+
+      {isLoading && <div className="tll-daylog-empty">Loading…</div>}
 
       {!isLoading && savedCount !== null && (
-        <div
-          style={{
-            color: theme.font.color.secondary,
-            display: 'flex',
-            alignItems: 'center',
-            gap: theme.spacing[2],
-          }}
-        >
+        <div className="tll-daylog-foot">
           <span>
             Logged {savedCount} {savedCount === 1 ? 'entry' : 'entries'} for{' '}
             {workedOn}.
@@ -201,127 +307,147 @@ const LogMyDay = () => {
 
       {!isLoading && savedCount === null && (
         <>
-          <span style={label}>
-            These are the things the system already knows about. Say how long
-            each took, correct anything wrong, and add what is missing.
-          </span>
+          <div className="tll-daylog-scroll">
+            <div className="tll-daylog-grid">
+              <div className="tll-daylog-col" />
+              {columns.map((column) => (
+                <div
+                  key={column}
+                  className={
+                    column === 'Minutes'
+                      ? 'tll-daylog-col tll-daylog-col-num'
+                      : 'tll-daylog-col'
+                  }
+                >
+                  {column}
+                </div>
+              ))}
 
-          {lines.map((line) => (
-            <div
-              key={line.key}
-              style={{
-                alignItems: 'center',
-                borderBottom: `1px solid ${theme.border.color.light}`,
-                display: 'flex',
-                gap: theme.spacing[2],
-                paddingBottom: theme.spacing[2],
-              }}
-            >
-              <span style={{ ...label, width: 74 }}>
-                {SOURCE_LABELS[line.source]}
-              </span>
-              <select
-                value={line.practiceAreaId ?? ''}
-                onChange={(event) =>
-                  update(line.key, {
-                    practiceAreaId:
-                      event.target.value === '' ? null : event.target.value,
-                  })
-                }
-                style={{ ...input, width: 170 }}
-              >
-                <option value="">Category</option>
-                {categories.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="text"
-                list="log-my-day-clients"
-                value={line.clientText}
-                placeholder="Client"
-                onChange={(event) =>
-                  update(line.key, { clientText: event.target.value })
-                }
-                style={{ ...input, width: 150 }}
-              />
-              <input
-                type="text"
-                list="log-my-day-jobs"
-                value={line.jobText}
-                placeholder="Job"
-                onChange={(event) =>
-                  update(line.key, { jobText: event.target.value })
-                }
-                style={{ ...input, width: 150 }}
-              />
-              <input
-                type="text"
-                value={line.description}
-                placeholder="Anything else you did"
-                onChange={(event) =>
-                  update(line.key, { description: event.target.value })
-                }
-                style={{ ...input, flex: 1 }}
-              />
-              <input
-                type="text"
-                value={line.notes}
-                placeholder="Notes"
-                onChange={(event) =>
-                  update(line.key, { notes: event.target.value })
-                }
-                style={{ ...input, flex: 1 }}
-              />
-              <select
-                value={line.status}
-                onChange={(event) =>
-                  update(line.key, { status: event.target.value })
-                }
-                style={{ ...input, width: 130 }}
-              >
-                {WORK_LOG_STATUSES.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                min={0}
-                step={5}
-                value={line.minutesText}
-                placeholder="min"
-                onChange={(event) =>
-                  update(line.key, { minutesText: event.target.value })
-                }
-                style={{ ...input, width: 72 }}
-              />
+              {lines.map((line) => (
+                <Fragment key={line.key}>
+                  <div
+                    className={
+                      isDerived(line)
+                        ? 'tll-daylog-mark tll-daylog-mark-derived'
+                        : 'tll-daylog-mark'
+                    }
+                    title={SOURCE_LABELS[line.source]}
+                  />
+                  <div className="tll-daylog-cell">
+                    <select
+                      className="tll-daylog-field"
+                      value={line.practiceAreaId ?? ''}
+                      onChange={(event) =>
+                        update(line.key, {
+                          practiceAreaId:
+                            event.target.value === ''
+                              ? null
+                              : event.target.value,
+                        })
+                      }
+                    >
+                      <option value="">&mdash;</option>
+                      {categories.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="tll-daylog-cell">
+                    <input
+                      className="tll-daylog-field"
+                      type="text"
+                      list="log-my-day-clients"
+                      value={line.clientText}
+                      onChange={(event) =>
+                        update(line.key, { clientText: event.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="tll-daylog-cell">
+                    <input
+                      className="tll-daylog-field"
+                      type="text"
+                      list="log-my-day-jobs"
+                      value={line.jobText}
+                      onChange={(event) =>
+                        update(line.key, { jobText: event.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="tll-daylog-cell">
+                    <input
+                      className="tll-daylog-field tll-daylog-field-main"
+                      type="text"
+                      value={line.description}
+                      placeholder={
+                        isDerived(line) ? '' : 'Anything else you did'
+                      }
+                      onChange={(event) =>
+                        update(line.key, { description: event.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="tll-daylog-cell">
+                    <input
+                      className="tll-daylog-field"
+                      type="text"
+                      value={line.notes}
+                      onChange={(event) =>
+                        update(line.key, { notes: event.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="tll-daylog-cell">
+                    <select
+                      className="tll-daylog-field"
+                      value={line.status}
+                      onChange={(event) =>
+                        update(line.key, { status: event.target.value })
+                      }
+                    >
+                      {WORK_LOG_STATUSES.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="tll-daylog-cell">
+                    <input
+                      className="tll-daylog-field tll-daylog-field-num"
+                      type="number"
+                      min={0}
+                      step={5}
+                      value={line.minutesText}
+                      onChange={(event) =>
+                        update(line.key, { minutesText: event.target.value })
+                      }
+                    />
+                  </div>
+                </Fragment>
+              ))}
             </div>
-          ))}
+          </div>
 
-          <div style={{ display: 'flex', gap: theme.spacing[2] }}>
+          <div className="tll-daylog-foot">
             <Button
               title="Add a line"
               onClick={() => setLines((current) => [...current, blankLine()])}
             />
             <Button
-              title={
-                isSaving ? 'Saving…' : `Save ${saveable.length} of ${lines.length}`
-              }
+              title={isSaving ? 'Saving…' : 'Save the day'}
               variant="primary"
               isDisabled={isSaving || saveable.length === 0}
               onClick={save}
             />
-          </div>
-
-          {saveable.length < lines.length && (
-            <span style={label}>
-              Lines with nothing written in them are not saved.
+            <span className="tll-daylog-count">
+              {saveable.length === lines.length
+                ? `${saveable.length} to save`
+                : `${saveable.length} of ${lines.length} to save — a line with nothing written in it is skipped`}
             </span>
-          )}
+          </div>
         </>
       )}
     </div>
