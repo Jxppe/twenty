@@ -67,9 +67,29 @@ Rejected because the finance half is not what this system is for. ERPNext contri
 1. Whether the firm is on the Revenue Department's **e-Tax Invoice & e-Receipt** system, where each individual invoice is transmitted to the RD, or only files **monthly PP30 and PND returns** on the e-filing portal. `erpnext_thailand` generates the monthly reports. It does not appear to do automated e-tax invoice transmission, which is one of the things FlowAccount does as a certified provider. e-Tax Invoice is voluntary, not mandatory.
 2. What "gap-free" means to them in practice. ERPNext keeps cancelled documents in the sequence, so there is never a hole, but a reissued document is named `INV-003-1`. Some accountants accept the suffix, some do not want it on anything the RD sees.
 
-### Rejected: forking Frappe CRM
+### Terminology, because these get conflated
 
-Its frontend is hand-written lead and deal pages rather than anything schema-driven, so a Matter or a Work Log costs the same work there as anywhere. Read it as the reference implementation of frappe-ui. Do not build on it.
+- **frappe-ui** is the Vue 3 component library and design system. **We are using it**, for the work log screen and the inbox.
+- **Frappe framework** is the backend, DocTypes and Desk. We are using it for everything.
+- **Frappe CRM** is a finished sales CRM product built with the other two. This is the one that was rejected, and only as a base to build on.
+
+### Rejected: building on Frappe CRM
+
+Frappe CRM defines 39 of its own doctypes, including `CRM Lead`, `CRM Deal`, `CRM Organization`, `CRM Contacts`, `CRM Task` and `FCRM Note`. It uses the stock `Contact` doctype, but organizations, tasks and notes are all its own.
+
+The decisive point is its supported extension surface: Custom Fields on its own doctypes through a side panel layout builder, plus **CRM Form Script**, which its documentation describes as the only supported way to customize CRM UI behavior. That is field-level customization of pages that already exist. There is no supported way to add a Matter page, a Work Log entry screen, or a Matter list view. Getting those means editing its Vue frontend, which is a fork to merge upstream into forever.
+
+The two screens this firm uses daily are a matter record and a work log entry form. Frappe CRM has no concept of either.
+
+**Do read it.** It is the best reference implementation of frappe-ui available. Clone it somewhere read-only and copy its list view, filtering, side panel and data fetching patterns. Copying patterns costs nothing. Inheriting its release cycle costs forever.
+
+### Considered: installing Frappe CRM alongside, unmodified
+
+Apps compose on one site, so this is real. Frappe CRM uses the stock `Contact` doctype, so `tll_crm` matters and work logs could link to the same contact records. The firm gets a polished contacts and intake UI, `tll_crm` keeps matters, work logs and billing, and Frappe CRM upgrades cleanly because nothing was touched.
+
+Not taken, for two reasons. Staff would work contacts at `/crm` and everything else in Desk or the custom screens, which is daily friction for a six-person firm. And `CRM Organization` and the `Client` doctype would both claim to be the client, resolvable only by dropping `Client` and pushing Thai legal name, tax ID, passport number and client type onto `CRM Organization` and `Contact` as custom fields, at which point the client model is shaped by their doctype rather than by the firm.
+
+Revisit if the firm turns out to want a real enquiry pipeline, which `CRM Lead` and `CRM Deal` would give for free.
 
 ### Open: Frappe Helpdesk for the inbox
 
