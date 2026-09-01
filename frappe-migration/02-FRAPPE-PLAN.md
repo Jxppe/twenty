@@ -4,10 +4,42 @@ Companion to `00-BRIEF.md` and `01-DATA-MODEL.md`. `schema.json` is the machine-
 
 One custom app on the bare Frappe framework. Nothing else installed. `00-BRIEF.md` records why ERPNext was rejected and what would reverse that.
 
+## Bootstrap
+
+**Nothing is forked.** A Frappe custom app is not a fork. `bench new-app` generates an empty scaffold that is your repo from commit one, with no upstream history to carry and no merges to take.
+
+Do not clone Frappe CRM to build on. Clone it separately, in a folder you never build in, if you want to read its frappe-ui code as a reference.
+
+Dev environment via [`frappe/frappe_docker`](https://github.com/frappe/frappe_docker):
+
+```bash
+git clone https://github.com/frappe/frappe_docker
+cd frappe_docker
+cp -R devcontainer-example .devcontainer
+# open in VSCode, "Reopen in Container"
+```
+
+Inside the container:
+
+```bash
+bench init --frappe-branch version-16 frappe-bench
+cd frappe-bench
+bench new-site tll.localhost
+bench new-app tll_crm
+bench --site tll.localhost install-app tll_crm
+bench start
+```
+
+`version-16` is current stable and `version-15` is still maintained. Nothing here constrains the choice, since ERPNext is not installed.
+
+**The app is `tll_crm`, with an underscore.** Frappe app names must be valid Python module names, and the directory under `apps/` has to match. Name the GitHub repo `tll_crm` too so the two never drift.
+
+`frappe/frappe` and `frappe/bench` are dependencies that bench manages. The entire codebase lives in `apps/tll_crm/`. Everything else in the bench folder is machinery that can be thrown away and recreated.
+
 ## App shape
 
 ```
-apps/<firm_app>/<firm_app>/
+apps/tll_crm/tll_crm/
   crm/doctype/         client, matter, practice_area, billing_entity, booking,
                        matter_deadline, required_document
   work/doctype/        work_log
