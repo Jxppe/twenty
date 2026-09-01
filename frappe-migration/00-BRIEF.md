@@ -1,42 +1,39 @@
 # Brief for the Frappe rebuild
 
-Hand this file, `01-DATA-MODEL.md`, `02-FRAPPE-PLAN.md` and `schema.json` to the chat working in the Frappe repo. It is everything that was decided while the system was being built on Twenty.
+Hand this file, `01-DATA-MODEL.md`, `02-FRAPPE-PLAN.md` and `schema.json` to the chat working in the Frappe repo. It is everything decided while the system was being built on Twenty.
 
-## What the system is
+## What this is, and what it is not
 
-Back office for a small Thai law / visa services firm. It handles:
+**A work log and CRM system for a small Thai law / visa services firm, with some finance attached.** The work log and the client record are the point. Quotations, invoices and payments exist because the firm has to send documents to clients, not because anyone wants to run accounting here.
+
+Read that as a ranking, because it decides everything below. If a design choice makes work logging faster at the cost of the billing model, take it.
+
+## Scope
 
 - Clients, as individuals and as companies, with names in both English and Thai
 - Jobs (called "matters" in the code, mapped onto Twenty's `opportunity` object), each with a type of work, an owner, deadlines and a list of documents the client still owes us
-- Quotations, then invoices raised from them, then payments against those invoices
+- **Staff work logs**, in minutes, against a matter or a client, marked billable or not, with a status
+- Appointments and consultations, which work logs can come out of
 - Three separate legal entities of the firm, each billing under its own name and tax ID
-- Appointments and consultations
-- Staff work logs, in minutes, marked billable or not
+- Quotations, then invoices raised from them, then payments against those invoices
 - An inbound message inbox across LINE, Facebook, Instagram, WhatsApp, email and web chat, with each customer handle resolving back to one CRM contact
 
-Currency is THB everywhere. Money is stored as integer micros (value x 1,000,000) plus a currency code, which is a Twenty storage detail and should not carry over.
+Currency is THB everywhere. Money is stored in Twenty as integer micros (value x 1,000,000) plus a currency code, which is a Twenty storage detail and should not carry over. Use decimal.
+
+## Out of scope
+
+**Accounting.** FlowAccount is the ledger and stays the ledger. Invoices and payments carry `externalReference` and `externalUrl` pointing at the FlowAccount document, and that is the whole integration. Nothing in this system posts a journal entry, keeps a chart of accounts, or files tax.
+
+This was evaluated properly, not assumed. See the rejected options below.
 
 ## Rules that came out of building it, and still hold
 
-- **Document numbering is per billing entity and gap-free.** Each of the three entities has its own quotation and invoice sequence.
+- **Document numbering is per billing entity and gap-free.** Each of the three entities has its own quotation and invoice sequence. Gap-free means no missing numbers in the run: a cancelled document keeps its number and is marked cancelled rather than deleted, because a hole in the sequence is what an auditor reads as a hidden sale.
 - **An invoice copies from a quotation, it does not stay linked to it.** Editing a quotation after the fact must not move an invoice. The `quotation` link on an invoice is provenance only.
 - **Retired services must keep resolving.** `product.isActive` is a flag, never a delete, because old quotations and invoices reference the line.
 - **Tax is per line.** `taxRate` sits on the service and is copied to each quotation and invoice line. Twenty has no tax concept at all, which is one of the reasons for moving.
+- **Work logs are in minutes, not hours.** Nobody rounds 20 minutes up to half an hour honestly, so do not make them.
 - **Messaging handles are separate from contacts.** One person can hold a LINE user id, an Instagram handle and a phone number. `contactIdentity` models the handle, `person` models the human, and inbound webhooks resolve one to the other. Provider message and thread ids are stored so redelivered webhooks deduplicate.
-
-## The open decision: FlowAccount
-
-On Twenty, FlowAccount was the accounting system of record. The CRM kept no ledger, and invoices and payments carry `externalReference` and `externalUrl` pointing at the FlowAccount document. That was a workaround for Twenty having no accounting model at all, not a preference.
-
-**That is now open.** The firm is willing to drop FlowAccount if ERPNext plus the Thai localization app can do the job. Settle it before writing any billing doctype, because it decides whether Invoice is a custom doctype or an ERPNext Sales Invoice.
-
-The test to run first, in this order:
-
-1. Install ERPNext and [`ecosoft-frappe/erpnext_thailand`](https://github.com/ecosoft-frappe/erpnext_thailand) on a scratch site. It is free, actively developed, and covers Thai tax invoices, VAT on services recognised at payment, withholding tax with certificate generation, PND reports for Revenue Department submission, Thai amount-to-words and Thai date formatting.
-2. **Find out whether the firm files e-Tax Invoice / e-Receipt electronically with the Revenue Department.** This is the one thing FlowAccount does that `erpnext_thailand` does not appear to do. It generates printable PND reports for RD submission, but there is no evidence of automated e-tax transmission. If the firm files electronically today, that gap is the whole decision.
-3. Show the accountant a generated Thai tax invoice and a withholding tax certificate from the scratch site. If they accept both, FlowAccount goes.
-
-If FlowAccount stays after all, fall back to the plan in the last section of `02-FRAPPE-PLAN.md`.
 
 ## Data to migrate
 
@@ -44,40 +41,49 @@ None. The Twenty workspace holds 6 demo contacts and matching seed records. This
 
 ## Why we are leaving Twenty
 
-- No tax, no line-level pricing model, no document numbering. Quotations and invoices were modelled by hand as custom objects, and every total has to be computed by application code that Twenty gives you no natural place to put.
-- No print or PDF generation. Quotation and invoice PDFs are uploaded as file attachments, produced elsewhere.
-- The custom messaging inbox has no UI. The objects exist, but rendering a usable inbox means writing React inside a fork of Twenty and maintaining that fork forever.
+- No tax, no line-level pricing, no document numbering. Quotations and invoices were modelled by hand as custom objects, and every total has to be computed by application code that Twenty gives you no natural place to put.
+- No print or PDF generation. Quotation and invoice PDFs are uploaded as attachments, produced elsewhere.
+- The messaging inbox has no UI. The objects exist, but rendering a usable inbox means writing React inside a fork of Twenty and maintaining that fork forever.
 - Its extension model is metadata plus workflows. There is no server-side hook where "recalculate the invoice total when a line changes" naturally lives.
 
 Frappe gives all four out of the box: controller hooks, naming series, print formats, and a Desk UI generated from the schema.
 
-## Platform decision
+## Platform decision: a custom app on the Frappe framework
 
-**ERPNext as the base, plus one custom app for what ERPNext does not model.** Frappe apps install side by side on one site, so this is not a choice between "use existing apps" and "build our own". It is a question of which half is which.
+Nothing installed alongside it except the framework itself.
 
-ERPNext already covers, properly and with Thai localization available:
+You get the DocType engine, a working Desk UI generated from the schema, permissions and roles, server-side controller hooks, background jobs, a REST API, print formats and PDF generation, file storage and users. Define the 16 objects in `01-DATA-MODEL.md` and the back office works in Desk before any frontend exists.
 
-- Multi-company, which is exactly the three billing entities, with per-company accounts, addresses and tax IDs. This is unpleasant to write yourself and easy to get subtly wrong.
-- Quotation, Sales Invoice, Payment Entry, with tax templates applied per line.
-- Service items (`is_stock_item = 0`), so nothing drags in stock or delivery.
-- Timesheet with billable hours flowing into an invoice, which is the professional services flow it was designed around.
-- Project and Task, which are a defensible model for a matter.
+frappe-ui comes out for the two screens that people touch every day and that a generated form serves badly. See `02-FRAPPE-PLAN.md`.
 
-The custom app carries what ERPNext has no answer for: practice areas, matter deadlines, required documents, bookings, and the omnichannel inbox.
+### Rejected: ERPNext
 
-**Read Frappe Helpdesk before building the inbox.** It is an agent inbox with threading, assignment and statuses, already built on frappe-ui, and the inbox is the single screen that justified leaving Twenty. It is email-first, so LINE remains a custom webhook and a custom channel either way, but inheriting the inbox UI is worth more than the `conversation` and `inbox_message` doctypes are worth writing.
+Evaluated seriously, because on paper it covers the finance half: multi-company is exactly the three billing entities, Sales Invoice and Payment Entry handle per-line tax and outstanding amounts, Item with `is_stock_item = 0` is a service catalogue, and [`ecosoft-frappe/erpnext_thailand`](https://github.com/ecosoft-frappe/erpnext_thailand) adds Thai tax invoices, withholding tax certificates and PND reports.
 
-**Do not fork Frappe CRM.** Its frontend is hand-written lead and deal pages rather than anything schema-driven, so a Matter or an Invoice costs the same work there as anywhere. Read it as the reference implementation of frappe-ui, do not build on it.
+Rejected because the finance half is not what this system is for. ERPNext contributes nothing to work logs, practice areas, matter deadlines, required documents, bookings or the inbox, which is the majority of the build. Its Timesheet is close to our work log but not free, being built around activity types and billing rates that feed a Sales Invoice, and bending it to minutes, a billable flag, a status, a practice area and a link to a booking costs more than writing the doctype. The price is permanent: a chart of accounts and fiscal years to maintain, `erpnext_thailand` as a dependency, and custom doctypes that have to survive ERPNext upgrades. That is a lot to carry for five doctypes and a print format.
+
+**Reversal condition.** If the firm ever decides to run the ledger in-house and drop FlowAccount, this flips and ERPNext becomes the right base. Before that decision, two things need checking with the firm's accountant, who currently handles all of it:
+
+1. Whether the firm is on the Revenue Department's **e-Tax Invoice & e-Receipt** system, where each individual invoice is transmitted to the RD, or only files **monthly PP30 and PND returns** on the e-filing portal. `erpnext_thailand` generates the monthly reports. It does not appear to do automated e-tax invoice transmission, which is one of the things FlowAccount does as a certified provider. e-Tax Invoice is voluntary, not mandatory.
+2. What "gap-free" means to them in practice. ERPNext keeps cancelled documents in the sequence, so there is never a hole, but a reissued document is named `INV-003-1`. Some accountants accept the suffix, some do not want it on anything the RD sees.
+
+### Rejected: forking Frappe CRM
+
+Its frontend is hand-written lead and deal pages rather than anything schema-driven, so a Matter or a Work Log costs the same work there as anywhere. Read it as the reference implementation of frappe-ui. Do not build on it.
+
+### Open: Frappe Helpdesk for the inbox
+
+Not rejected, not decided. See the inbox section of `02-FRAPPE-PLAN.md`.
 
 ## Thai and English
 
 The pattern in use, which carries over unchanged:
 
-- **UI in English, content in Thai.** This works and is what the firm already does. Twenty ships no Thai locale, so the interface was always going to be English. Frappe ships a `th` translation if the interface is ever wanted in Thai, and `erpnext_thailand` adds Thai date formatting and Thai amount-to-words for documents.
+- **UI in English, content in Thai.** This works and is what the firm already does. Twenty ships no Thai locale, so the interface was always going to be English. Frappe ships a `th` translation if the interface is ever wanted in Thai.
 - **Names get parallel fields, not translation.** `person.nameTh` and `company.nameTh` hold the Thai spelling next to the Latin one, because both appear on real documents and neither is derivable from the other. `billingEntity.legalName` is the registered name exactly as it must print on an invoice.
 - **Free text is just Thai.** Notes, message bodies, work log descriptions and line descriptions are plain UTF-8 and take Thai with no special handling.
 
 Two real gotchas:
 
-1. **Full-text search does not segment Thai.** Thai is written without spaces, so a whole phrase becomes one token. Twenty works around this with an ILIKE fallback when the tsvector query returns nothing. Frappe's search has the same weakness. Plan on substring matching for Thai content, or a proper segmenter, and do not assume the built-in search will find a Thai word in the middle of a sentence.
-2. **PDF output needs a Thai font.** Print formats must ship a font with Thai glyphs, Sarabun or Noto Sans Thai, and the PDF renderer has to be configured to use it. Thai text silently renders as boxes otherwise. This is the single most likely thing to be discovered late, so prove it in step 3 of the FlowAccount test above, before anything else is built.
+1. **Full-text search does not segment Thai.** Thai is written without spaces, so a whole phrase becomes one token. Twenty works around this with an ILIKE fallback when the tsvector query returns nothing. Frappe's search has the same weakness. Plan on substring matching for Thai content, or a proper segmenter, and do not assume the built-in search will find a Thai word in the middle of a sentence. This matters more here than it looks, because work log descriptions are the thing people will search.
+2. **PDF output needs a Thai font.** Print formats must ship a font with Thai glyphs, Sarabun or Noto Sans Thai, and the PDF renderer has to be configured to use it. Thai text silently renders as boxes otherwise. Prove this with a real Thai string in a generated PDF before building any print format on top of it.
