@@ -1,0 +1,2321 @@
+[
+  {
+    "nameSingular": "inboxMessage",
+    "namePlural": "inboxMessages",
+    "label": "Inbox message",
+    "labelPlural": "Inbox messages",
+    "description": "A single message inside a conversation",
+    "isCustom": true,
+    "fields": [
+      {
+        "name": "body",
+        "type": "TEXT",
+        "label": "Body",
+        "description": "Text content of the message"
+      },
+      {
+        "name": "direction",
+        "type": "SELECT",
+        "label": "Direction",
+        "description": "Whether the customer sent it, an agent sent it, or it is an internal note",
+        "options": [
+          {
+            "value": "INBOUND",
+            "label": "Inbound"
+          },
+          {
+            "value": "OUTBOUND",
+            "label": "Outbound"
+          },
+          {
+            "value": "INTERNAL",
+            "label": "Internal note"
+          }
+        ],
+        "default": "'INBOUND'"
+      },
+      {
+        "name": "sentAt",
+        "type": "DATE_TIME",
+        "label": "Sent at",
+        "description": "When the provider reports the message was sent"
+      },
+      {
+        "name": "senderName",
+        "type": "TEXT",
+        "label": "Sender",
+        "description": "Display name of whoever sent the message"
+      },
+      {
+        "name": "externalId",
+        "type": "TEXT",
+        "label": "Provider message ID",
+        "description": "Provider-side message identifier, used to deduplicate redelivered webhooks"
+      },
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Name",
+        "description": "Name"
+      },
+      {
+        "name": "conversation",
+        "type": "RELATION",
+        "label": "Conversation",
+        "description": "The thread this message belongs to",
+        "relationType": "MANY_TO_ONE",
+        "target": "conversation",
+        "joinColumn": "conversationId",
+        "onDelete": "CASCADE"
+      }
+    ]
+  },
+  {
+    "nameSingular": "note",
+    "namePlural": "notes",
+    "label": "Note",
+    "labelPlural": "Notes",
+    "description": "A note",
+    "isCustom": false,
+    "fields": [
+      {
+        "name": "title",
+        "type": "TEXT",
+        "label": "Title",
+        "description": "Note title"
+      },
+      {
+        "name": "bodyV2",
+        "type": "RICH_TEXT",
+        "label": "Body",
+        "description": "Note body"
+      },
+      {
+        "name": "noteTargets",
+        "type": "RELATION",
+        "label": "Relations",
+        "description": "Note targets",
+        "relationType": "ONE_TO_MANY",
+        "target": "noteTarget"
+      }
+    ]
+  },
+  {
+    "nameSingular": "task",
+    "namePlural": "tasks",
+    "label": "Task",
+    "labelPlural": "Tasks",
+    "description": "A task",
+    "isCustom": false,
+    "fields": [
+      {
+        "name": "title",
+        "type": "TEXT",
+        "label": "Title",
+        "description": "Task title"
+      },
+      {
+        "name": "bodyV2",
+        "type": "RICH_TEXT",
+        "label": "Body",
+        "description": "Task body"
+      },
+      {
+        "name": "dueAt",
+        "type": "DATE_TIME",
+        "label": "Due Date",
+        "description": "Task due date"
+      },
+      {
+        "name": "status",
+        "type": "SELECT",
+        "label": "Status",
+        "description": "Task status",
+        "options": [
+          {
+            "value": "TODO",
+            "label": "To do"
+          },
+          {
+            "value": "IN_PROGRESS",
+            "label": "In progress"
+          },
+          {
+            "value": "DONE",
+            "label": "Done"
+          }
+        ],
+        "default": "'TODO'"
+      },
+      {
+        "name": "taskTargets",
+        "type": "RELATION",
+        "label": "Relations",
+        "description": "Task targets",
+        "relationType": "ONE_TO_MANY",
+        "target": "taskTarget"
+      },
+      {
+        "name": "assignee",
+        "type": "RELATION",
+        "label": "Assignee",
+        "description": "Task assignee",
+        "relationType": "MANY_TO_ONE",
+        "target": "workspaceMember",
+        "joinColumn": "assigneeId",
+        "onDelete": "SET_NULL"
+      }
+    ]
+  },
+  {
+    "nameSingular": "workspaceMember",
+    "namePlural": "workspaceMembers",
+    "label": null,
+    "labelPlural": null,
+    "description": null,
+    "isCustom": false,
+    "fields": [
+      {
+        "name": "name",
+        "type": "FULL_NAME",
+        "label": "Name",
+        "description": "Workspace member name"
+      },
+      {
+        "name": "blocklist",
+        "type": "RELATION",
+        "label": "Blocklist",
+        "description": "Blocklisted handles",
+        "relationType": "ONE_TO_MANY",
+        "target": "blocklist"
+      },
+      {
+        "name": "calendarEventParticipants",
+        "type": "RELATION",
+        "label": "Calendar Event Participants",
+        "description": "Calendar Event Participants",
+        "relationType": "ONE_TO_MANY",
+        "target": "calendarEventParticipant"
+      },
+      {
+        "name": "accountOwnerForCompanies",
+        "type": "RELATION",
+        "label": "Account Owner For Companies",
+        "description": "Account owner for companies",
+        "relationType": "ONE_TO_MANY",
+        "target": "company"
+      },
+      {
+        "name": "messageParticipants",
+        "type": "RELATION",
+        "label": "Message Participants",
+        "description": "Message Participants",
+        "relationType": "ONE_TO_MANY",
+        "target": "messageParticipant"
+      },
+      {
+        "name": "ownedOpportunities",
+        "type": "RELATION",
+        "label": "Owned opportunities",
+        "description": "Opportunities owned by the workspace member",
+        "relationType": "ONE_TO_MANY",
+        "target": "opportunity"
+      },
+      {
+        "name": "assignedTasks",
+        "type": "RELATION",
+        "label": "Assigned tasks",
+        "description": "Tasks assigned to the workspace member",
+        "relationType": "ONE_TO_MANY",
+        "target": "task"
+      },
+      {
+        "name": "timelineActivities",
+        "type": "RELATION",
+        "label": "Events",
+        "description": "Events linked to the workspace member",
+        "relationType": "ONE_TO_MANY",
+        "target": "timelineActivity"
+      },
+      {
+        "name": "assignedConversations",
+        "type": "RELATION",
+        "label": "Assigned conversations",
+        "description": "Conversations assigned to this member",
+        "relationType": "ONE_TO_MANY",
+        "target": "conversation"
+      },
+      {
+        "name": "matterDeadlines",
+        "type": "RELATION",
+        "label": "Deadlines",
+        "description": "Deadlines this person is answerable for",
+        "relationType": "ONE_TO_MANY",
+        "target": "matterDeadline"
+      },
+      {
+        "name": "bookings",
+        "type": "RELATION",
+        "label": "Bookings",
+        "description": "Appointments this person is taking",
+        "relationType": "ONE_TO_MANY",
+        "target": "booking"
+      },
+      {
+        "name": "workLogs",
+        "type": "RELATION",
+        "label": "Work logs",
+        "description": "Everything this member of staff has logged",
+        "relationType": "ONE_TO_MANY",
+        "target": "workLog"
+      }
+    ]
+  },
+  {
+    "nameSingular": "opportunity",
+    "namePlural": "opportunities",
+    "label": "Opportunity",
+    "labelPlural": "Opportunities",
+    "description": "An opportunity",
+    "isCustom": false,
+    "fields": [
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Name",
+        "description": "The opportunity name"
+      },
+      {
+        "name": "closeDate",
+        "type": "DATE_TIME",
+        "label": "Close date",
+        "description": "Opportunity close date"
+      },
+      {
+        "name": "stage",
+        "type": "SELECT",
+        "label": "Stage",
+        "description": "Opportunity stage",
+        "options": [
+          {
+            "value": "NEW",
+            "label": "New"
+          },
+          {
+            "value": "SCREENING",
+            "label": "Screening"
+          },
+          {
+            "value": "MEETING",
+            "label": "Meeting"
+          },
+          {
+            "value": "PROPOSAL",
+            "label": "Proposal"
+          },
+          {
+            "value": "CUSTOMER",
+            "label": "Customer"
+          }
+        ],
+        "default": "'NEW'"
+      },
+      {
+        "name": "owner",
+        "type": "RELATION",
+        "label": "Owner",
+        "description": "Opportunity owner",
+        "relationType": "MANY_TO_ONE",
+        "target": "workspaceMember",
+        "joinColumn": "ownerId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "closedAt",
+        "type": "DATE_TIME",
+        "label": "Closed",
+        "description": "Empty means still open"
+      },
+      {
+        "name": "openedAt",
+        "type": "DATE_TIME",
+        "label": "Opened",
+        "description": "When the firm took this on, which is not when the record was created"
+      },
+      {
+        "name": "billingEntity",
+        "type": "RELATION",
+        "label": "Billing entity",
+        "description": "The legal party to this engagement",
+        "relationType": "MANY_TO_ONE",
+        "target": "billingEntity",
+        "joinColumn": "billingEntityId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "requiredDocuments",
+        "type": "RELATION",
+        "label": "Required documents",
+        "description": "What we are waiting on from the client",
+        "relationType": "ONE_TO_MANY",
+        "target": "requiredDocument"
+      },
+      {
+        "name": "matterDeadlines",
+        "type": "RELATION",
+        "label": "Deadlines",
+        "description": "Dates this job has to hit",
+        "relationType": "ONE_TO_MANY",
+        "target": "matterDeadline"
+      },
+      {
+        "name": "bookings",
+        "type": "RELATION",
+        "label": "Bookings",
+        "description": "Appointments about this job",
+        "relationType": "ONE_TO_MANY",
+        "target": "booking"
+      },
+      {
+        "name": "workLogs",
+        "type": "RELATION",
+        "label": "Work logs",
+        "description": "Time recorded against this job",
+        "relationType": "ONE_TO_MANY",
+        "target": "workLog"
+      },
+      {
+        "name": "practiceArea",
+        "type": "RELATION",
+        "label": "Type of work",
+        "description": "The kind of work this job is",
+        "relationType": "MANY_TO_ONE",
+        "target": "practiceArea",
+        "joinColumn": "practiceAreaId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "invoices",
+        "type": "RELATION",
+        "label": "Invoices",
+        "description": "Billed against this job",
+        "relationType": "ONE_TO_MANY",
+        "target": "invoice"
+      },
+      {
+        "name": "quotations",
+        "type": "RELATION",
+        "label": "Quotations",
+        "description": "What was offered for this job",
+        "relationType": "ONE_TO_MANY",
+        "target": "quotation"
+      },
+      {
+        "name": "pointOfContact",
+        "type": "RELATION",
+        "label": "Point of Contact",
+        "description": "Opportunity point of contact",
+        "relationType": "MANY_TO_ONE",
+        "target": "person",
+        "joinColumn": "pointOfContactId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "company",
+        "type": "RELATION",
+        "label": "Company",
+        "description": "Opportunity company",
+        "relationType": "MANY_TO_ONE",
+        "target": "company",
+        "joinColumn": "companyId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "amount",
+        "type": "CURRENCY",
+        "label": "Amount",
+        "description": "Opportunity amount",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      }
+    ]
+  },
+  {
+    "nameSingular": "company",
+    "namePlural": "companies",
+    "label": "Company",
+    "labelPlural": "Companies",
+    "description": "A company",
+    "isCustom": false,
+    "fields": [
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Name",
+        "description": "The company name"
+      },
+      {
+        "name": "domainName",
+        "type": "LINKS",
+        "label": "Domain Name",
+        "description": "The company website URL. We use this url to fetch the company icon",
+        "settings": {
+          "maxNumberOfValues": 1
+        }
+      },
+      {
+        "name": "address",
+        "type": "ADDRESS",
+        "label": "Address",
+        "description": "Address of the company"
+      },
+      {
+        "name": "linkedinLink",
+        "type": "LINKS",
+        "label": "Linkedin",
+        "description": "The company Linkedin account"
+      },
+      {
+        "name": "annualRevenue",
+        "type": "CURRENCY",
+        "label": "Annual Revenue",
+        "description": "The company's total annual revenue"
+      },
+      {
+        "name": "people",
+        "type": "RELATION",
+        "label": "People",
+        "description": "People linked to the company.",
+        "relationType": "ONE_TO_MANY",
+        "target": "person"
+      },
+      {
+        "name": "accountOwner",
+        "type": "RELATION",
+        "label": "Account Owner",
+        "description": "Your team member responsible for managing the company account",
+        "relationType": "MANY_TO_ONE",
+        "target": "workspaceMember",
+        "joinColumn": "accountOwnerId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "opportunities",
+        "type": "RELATION",
+        "label": "Opportunities",
+        "description": "Opportunities linked to the company.",
+        "relationType": "ONE_TO_MANY",
+        "target": "opportunity"
+      },
+      {
+        "name": "nameTh",
+        "type": "TEXT",
+        "label": "Name (TH)",
+        "description": "The registered Thai name, as it appears on the DBD record"
+      },
+      {
+        "name": "quotations",
+        "type": "RELATION",
+        "label": "Quotations",
+        "description": "Quoted to this organization",
+        "relationType": "ONE_TO_MANY",
+        "target": "quotation"
+      },
+      {
+        "name": "invoices",
+        "type": "RELATION",
+        "label": "Invoices",
+        "description": "Billed to this organization",
+        "relationType": "ONE_TO_MANY",
+        "target": "invoice"
+      }
+    ]
+  },
+  {
+    "nameSingular": "person",
+    "namePlural": "people",
+    "label": "Person",
+    "labelPlural": "People",
+    "description": "A person",
+    "isCustom": false,
+    "fields": [
+      {
+        "name": "name",
+        "type": "FULL_NAME",
+        "label": "Name",
+        "description": "Contact's name"
+      },
+      {
+        "name": "emails",
+        "type": "EMAILS",
+        "label": "Emails",
+        "description": "Contact's Emails",
+        "settings": {
+          "maxNumberOfValues": 1
+        }
+      },
+      {
+        "name": "linkedinLink",
+        "type": "LINKS",
+        "label": "Linkedin",
+        "description": "Contact's Linkedin account"
+      },
+      {
+        "name": "jobTitle",
+        "type": "TEXT",
+        "label": "Job Title",
+        "description": "Contact's job title"
+      },
+      {
+        "name": "phones",
+        "type": "PHONES",
+        "label": "Phones",
+        "description": "Contact's phone numbers",
+        "settings": {
+          "maxNumberOfValues": 1
+        }
+      },
+      {
+        "name": "calendarEventParticipants",
+        "type": "RELATION",
+        "label": "Calendar Event Participants",
+        "description": "Calendar Event Participants",
+        "relationType": "ONE_TO_MANY",
+        "target": "calendarEventParticipant"
+      },
+      {
+        "name": "company",
+        "type": "RELATION",
+        "label": "Company",
+        "description": "Contact's company",
+        "relationType": "MANY_TO_ONE",
+        "target": "company",
+        "joinColumn": "companyId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "listMemberships",
+        "type": "RELATION",
+        "label": "Lists",
+        "description": "Lists the contact belongs to",
+        "relationType": "ONE_TO_MANY",
+        "target": "messageListMember"
+      },
+      {
+        "name": "messageParticipants",
+        "type": "RELATION",
+        "label": "Message Participants",
+        "description": "Message Participants",
+        "relationType": "ONE_TO_MANY",
+        "target": "messageParticipant"
+      },
+      {
+        "name": "pointOfContactForOpportunities",
+        "type": "RELATION",
+        "label": "Opportunities",
+        "description": "List of opportunities for which that person is the point of contact",
+        "relationType": "ONE_TO_MANY",
+        "target": "opportunity"
+      },
+      {
+        "name": "conversations",
+        "type": "RELATION",
+        "label": "Conversations",
+        "description": "Omnichannel conversations with this contact",
+        "relationType": "ONE_TO_MANY",
+        "target": "conversation"
+      },
+      {
+        "name": "contactIdentities",
+        "type": "RELATION",
+        "label": "Channel identities",
+        "description": "Channel handles known to belong to this contact",
+        "relationType": "ONE_TO_MANY",
+        "target": "contactIdentity"
+      },
+      {
+        "name": "bookings",
+        "type": "RELATION",
+        "label": "Bookings",
+        "description": "Appointments with this client",
+        "relationType": "ONE_TO_MANY",
+        "target": "booking"
+      },
+      {
+        "name": "workLogs",
+        "type": "RELATION",
+        "label": "Work logs",
+        "description": "Time recorded against this client",
+        "relationType": "ONE_TO_MANY",
+        "target": "workLog"
+      },
+      {
+        "name": "nameTh",
+        "type": "FULL_NAME",
+        "label": "Name (TH)",
+        "description": "As written in Thai, when the client has a Thai name"
+      },
+      {
+        "name": "quotations",
+        "type": "RELATION",
+        "label": "Quotations",
+        "description": "Quoted to this client",
+        "relationType": "ONE_TO_MANY",
+        "target": "quotation"
+      },
+      {
+        "name": "invoices",
+        "type": "RELATION",
+        "label": "Invoices",
+        "description": "Billed to this client",
+        "relationType": "ONE_TO_MANY",
+        "target": "invoice"
+      }
+    ]
+  },
+  {
+    "nameSingular": "matterDeadline",
+    "namePlural": "matterDeadlines",
+    "label": "Deadline",
+    "labelPlural": "Deadlines",
+    "description": "A date a job has to hit, and who is answerable for it",
+    "isCustom": true,
+    "fields": [
+      {
+        "name": "title",
+        "type": "TEXT",
+        "label": "Deadline",
+        "description": "What is due, in the words someone would use out loud"
+      },
+      {
+        "name": "dueAt",
+        "type": "DATE_TIME",
+        "label": "Due"
+      },
+      {
+        "name": "deadlineType",
+        "type": "SELECT",
+        "label": "Type",
+        "description": "Where the obligation comes from",
+        "options": [
+          {
+            "value": "STATUTORY",
+            "label": "Statutory"
+          },
+          {
+            "value": "COURT",
+            "label": "Court"
+          },
+          {
+            "value": "CLIENT_COMMITTED",
+            "label": "Committed to client"
+          },
+          {
+            "value": "INTERNAL",
+            "label": "Internal"
+          }
+        ],
+        "default": "'INTERNAL'"
+      },
+      {
+        "name": "isCritical",
+        "type": "BOOLEAN",
+        "label": "Critical",
+        "description": "Missing this one has consequences that cannot be undone",
+        "default": false
+      },
+      {
+        "name": "completedAt",
+        "type": "DATE_TIME",
+        "label": "Completed",
+        "description": "Empty means still outstanding"
+      },
+      {
+        "name": "notes",
+        "type": "TEXT",
+        "label": "Notes"
+      },
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Name",
+        "description": "Name"
+      },
+      {
+        "name": "responsible",
+        "type": "RELATION",
+        "label": "Responsible",
+        "description": "Who is answerable for hitting this date",
+        "relationType": "MANY_TO_ONE",
+        "target": "workspaceMember",
+        "joinColumn": "responsibleId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "matter",
+        "type": "RELATION",
+        "label": "Job",
+        "description": "The job this deadline belongs to",
+        "relationType": "MANY_TO_ONE",
+        "target": "opportunity",
+        "joinColumn": "matterId",
+        "onDelete": "CASCADE"
+      }
+    ]
+  },
+  {
+    "nameSingular": "requiredDocument",
+    "namePlural": "requiredDocuments",
+    "label": "Required document",
+    "labelPlural": "Required documents",
+    "description": "Something the client has to give us before the work can move",
+    "isCustom": true,
+    "fields": [
+      {
+        "name": "requestedAt",
+        "type": "DATE_TIME",
+        "label": "Requested"
+      },
+      {
+        "name": "receivedAt",
+        "type": "DATE_TIME",
+        "label": "Received"
+      },
+      {
+        "name": "file",
+        "type": "FILES",
+        "label": "File",
+        "settings": {
+          "maxNumberOfValues": 10
+        }
+      },
+      {
+        "name": "notes",
+        "type": "TEXT",
+        "label": "Notes"
+      },
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Document"
+      },
+      {
+        "name": "status",
+        "type": "SELECT",
+        "label": "Status",
+        "options": [
+          {
+            "value": "REQUESTED",
+            "label": "Requested"
+          },
+          {
+            "value": "RECEIVED",
+            "label": "Received"
+          },
+          {
+            "value": "VERIFIED",
+            "label": "Verified"
+          },
+          {
+            "value": "REJECTED",
+            "label": "Rejected"
+          }
+        ],
+        "default": "'REQUESTED'"
+      },
+      {
+        "name": "matter",
+        "type": "RELATION",
+        "label": "Job",
+        "description": "The job this document is needed for",
+        "relationType": "MANY_TO_ONE",
+        "target": "opportunity",
+        "joinColumn": "matterId",
+        "onDelete": "CASCADE"
+      }
+    ]
+  },
+  {
+    "nameSingular": "booking",
+    "namePlural": "bookings",
+    "label": "Booking",
+    "labelPlural": "Bookings",
+    "description": "A consultation or appointment with a client",
+    "isCustom": true,
+    "fields": [
+      {
+        "name": "title",
+        "type": "TEXT",
+        "label": "Booking",
+        "description": "What it is, as it should read in a calendar cell"
+      },
+      {
+        "name": "startsAt",
+        "type": "DATE_TIME",
+        "label": "Starts"
+      },
+      {
+        "name": "endsAt",
+        "type": "DATE_TIME",
+        "label": "Ends"
+      },
+      {
+        "name": "status",
+        "type": "SELECT",
+        "label": "Status",
+        "options": [
+          {
+            "value": "REQUESTED",
+            "label": "Requested"
+          },
+          {
+            "value": "CONFIRMED",
+            "label": "Confirmed"
+          },
+          {
+            "value": "RESCHEDULED",
+            "label": "Rescheduled"
+          },
+          {
+            "value": "COMPLETED",
+            "label": "Completed"
+          },
+          {
+            "value": "CANCELLED",
+            "label": "Cancelled"
+          },
+          {
+            "value": "NO_SHOW",
+            "label": "No show"
+          }
+        ],
+        "default": "'REQUESTED'"
+      },
+      {
+        "name": "service",
+        "type": "SELECT",
+        "label": "Service",
+        "options": [
+          {
+            "value": "CONSULTATION",
+            "label": "Initial consultation"
+          },
+          {
+            "value": "FOLLOW_UP",
+            "label": "Follow-up"
+          },
+          {
+            "value": "NOTARIZATION",
+            "label": "Notarization"
+          },
+          {
+            "value": "SIGNING",
+            "label": "Document signing"
+          }
+        ],
+        "default": "'CONSULTATION'"
+      },
+      {
+        "name": "location",
+        "type": "SELECT",
+        "label": "Location",
+        "options": [
+          {
+            "value": "OFFICE",
+            "label": "Office"
+          },
+          {
+            "value": "ONLINE",
+            "label": "Online"
+          },
+          {
+            "value": "CLIENT_SITE",
+            "label": "Client site"
+          }
+        ],
+        "default": "'OFFICE'"
+      },
+      {
+        "name": "notes",
+        "type": "TEXT",
+        "label": "Notes"
+      },
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Name",
+        "description": "Name"
+      },
+      {
+        "name": "responsible",
+        "type": "RELATION",
+        "label": "Staff",
+        "description": "Who is taking this appointment",
+        "relationType": "MANY_TO_ONE",
+        "target": "workspaceMember",
+        "joinColumn": "responsibleId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "person",
+        "type": "RELATION",
+        "label": "Client",
+        "description": "Who the appointment is with",
+        "relationType": "MANY_TO_ONE",
+        "target": "person",
+        "joinColumn": "personId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "billingEntity",
+        "type": "RELATION",
+        "label": "Billing entity",
+        "description": "Which company is taking the appointment",
+        "relationType": "MANY_TO_ONE",
+        "target": "billingEntity",
+        "joinColumn": "billingEntityId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "fee",
+        "type": "CURRENCY",
+        "label": "Fee",
+        "description": "Charged for the appointment itself, if anything",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      },
+      {
+        "name": "matter",
+        "type": "RELATION",
+        "label": "Job",
+        "description": "What it is about, if there is a job yet",
+        "relationType": "MANY_TO_ONE",
+        "target": "opportunity",
+        "joinColumn": "matterId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "workLogs",
+        "type": "RELATION",
+        "label": "Work logs",
+        "description": "Time recorded against this appointment",
+        "relationType": "ONE_TO_MANY",
+        "target": "workLog"
+      }
+    ]
+  },
+  {
+    "nameSingular": "invoice",
+    "namePlural": "invoices",
+    "label": "Invoice",
+    "labelPlural": "Invoices",
+    "description": "What the client owes, and against which job",
+    "isCustom": true,
+    "fields": [
+      {
+        "name": "number",
+        "type": "TEXT",
+        "label": "Number"
+      },
+      {
+        "name": "issuedAt",
+        "type": "DATE_TIME",
+        "label": "Issued"
+      },
+      {
+        "name": "dueDate",
+        "type": "DATE_TIME",
+        "label": "Due"
+      },
+      {
+        "name": "externalReference",
+        "type": "TEXT",
+        "label": "FlowAccount ref",
+        "description": "Their document id. We point at it, we never copy their ledger"
+      },
+      {
+        "name": "externalUrl",
+        "type": "TEXT",
+        "label": "Open in FlowAccount"
+      },
+      {
+        "name": "notes",
+        "type": "TEXT",
+        "label": "Notes"
+      },
+      {
+        "name": "pdf",
+        "type": "FILES",
+        "label": "Document",
+        "settings": {
+          "maxNumberOfValues": 5
+        }
+      },
+      {
+        "name": "status",
+        "type": "SELECT",
+        "label": "Status",
+        "options": [
+          {
+            "value": "DRAFT",
+            "label": "Draft"
+          },
+          {
+            "value": "ISSUED",
+            "label": "Issued"
+          },
+          {
+            "value": "PARTIALLY_PAID",
+            "label": "Part paid"
+          },
+          {
+            "value": "PAID",
+            "label": "Paid"
+          },
+          {
+            "value": "OVERDUE",
+            "label": "Overdue"
+          },
+          {
+            "value": "VOID",
+            "label": "Void"
+          }
+        ],
+        "default": "'DRAFT'"
+      },
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Name",
+        "description": "Name"
+      },
+      {
+        "name": "payments",
+        "type": "RELATION",
+        "label": "Payments",
+        "description": "Money received against this invoice",
+        "relationType": "ONE_TO_MANY",
+        "target": "payment"
+      },
+      {
+        "name": "billingEntity",
+        "type": "RELATION",
+        "label": "Billing entity",
+        "description": "Which company is invoicing",
+        "relationType": "MANY_TO_ONE",
+        "target": "billingEntity",
+        "joinColumn": "billingEntityId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "matter",
+        "type": "RELATION",
+        "label": "Job",
+        "description": "The job being billed",
+        "relationType": "MANY_TO_ONE",
+        "target": "opportunity",
+        "joinColumn": "matterId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "lineItems",
+        "type": "RELATION",
+        "label": "Lines",
+        "description": "What is being charged for",
+        "relationType": "ONE_TO_MANY",
+        "target": "invoiceLineItem"
+      },
+      {
+        "name": "person",
+        "type": "RELATION",
+        "label": "Client",
+        "description": "Who is being billed",
+        "relationType": "MANY_TO_ONE",
+        "target": "person",
+        "joinColumn": "personId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "quotation",
+        "type": "RELATION",
+        "label": "From quotation",
+        "description": "Copied from, not linked to: editing the quotation afterwards must not move the invoice",
+        "relationType": "MANY_TO_ONE",
+        "target": "quotation",
+        "joinColumn": "quotationId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "company",
+        "type": "RELATION",
+        "label": "Organization",
+        "description": "When the bill goes to a company",
+        "relationType": "MANY_TO_ONE",
+        "target": "company",
+        "joinColumn": "companyId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "total",
+        "type": "CURRENCY",
+        "label": "Total",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      },
+      {
+        "name": "subtotal",
+        "type": "CURRENCY",
+        "label": "Subtotal",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      },
+      {
+        "name": "discount",
+        "type": "CURRENCY",
+        "label": "Discount",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      },
+      {
+        "name": "tax",
+        "type": "CURRENCY",
+        "label": "Tax",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      },
+      {
+        "name": "amountPaid",
+        "type": "CURRENCY",
+        "label": "Paid",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      }
+    ]
+  },
+  {
+    "nameSingular": "practiceArea",
+    "namePlural": "practiceAreas",
+    "label": "Type of work",
+    "labelPlural": "Types of work",
+    "description": "A kind of work the firm does: visa, property, notarization",
+    "isCustom": true,
+    "fields": [
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Name"
+      },
+      {
+        "name": "isActive",
+        "type": "BOOLEAN",
+        "label": "Active",
+        "default": true
+      },
+      {
+        "name": "matters",
+        "type": "RELATION",
+        "label": "Jobs",
+        "description": "Jobs in this practice area",
+        "relationType": "ONE_TO_MANY",
+        "target": "opportunity"
+      },
+      {
+        "name": "defaultBillingEntity",
+        "type": "RELATION",
+        "label": "Default billing entity",
+        "description": "Which entity a job in this practice area bills to unless overridden",
+        "relationType": "MANY_TO_ONE",
+        "target": "billingEntity",
+        "joinColumn": "defaultBillingEntityId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "workLogs",
+        "type": "RELATION",
+        "label": "Work logs",
+        "description": "Work logged against this category",
+        "relationType": "ONE_TO_MANY",
+        "target": "workLog"
+      }
+    ]
+  },
+  {
+    "nameSingular": "billingEntity",
+    "namePlural": "billingEntities",
+    "label": "Billing entity",
+    "labelPlural": "Billing entities",
+    "description": "One of the firm’s legal entities, as it appears on a contract",
+    "isCustom": true,
+    "fields": [
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Name",
+        "description": "Short name used across the CRM"
+      },
+      {
+        "name": "legalName",
+        "type": "TEXT",
+        "label": "Legal name",
+        "description": "Registered name as it must appear on invoices"
+      },
+      {
+        "name": "taxId",
+        "type": "TEXT",
+        "label": "Tax ID",
+        "description": "Thai taxpayer identification number"
+      },
+      {
+        "name": "isActive",
+        "type": "BOOLEAN",
+        "label": "Active",
+        "description": "Whether new work can be billed to this entity",
+        "default": true
+      },
+      {
+        "name": "practiceAreas",
+        "type": "RELATION",
+        "label": "Types of work",
+        "description": "Types of work that default to this entity",
+        "relationType": "ONE_TO_MANY",
+        "target": "practiceArea"
+      },
+      {
+        "name": "bookings",
+        "type": "RELATION",
+        "label": "Bookings",
+        "description": "Appointments taken by this entity",
+        "relationType": "ONE_TO_MANY",
+        "target": "booking"
+      },
+      {
+        "name": "matters",
+        "type": "RELATION",
+        "label": "Jobs",
+        "description": "Jobs billed to this entity",
+        "relationType": "ONE_TO_MANY",
+        "target": "opportunity"
+      },
+      {
+        "name": "workLogs",
+        "type": "RELATION",
+        "label": "Work logs",
+        "description": "Time recorded under this entity",
+        "relationType": "ONE_TO_MANY",
+        "target": "workLog"
+      },
+      {
+        "name": "invoices",
+        "type": "RELATION",
+        "label": "Invoices",
+        "description": "Issued by this entity",
+        "relationType": "ONE_TO_MANY",
+        "target": "invoice"
+      },
+      {
+        "name": "payments",
+        "type": "RELATION",
+        "label": "Payments",
+        "description": "Received by this entity",
+        "relationType": "ONE_TO_MANY",
+        "target": "payment"
+      },
+      {
+        "name": "quotations",
+        "type": "RELATION",
+        "label": "Quotations",
+        "description": "Quoted under this entity",
+        "relationType": "ONE_TO_MANY",
+        "target": "quotation"
+      }
+    ]
+  },
+  {
+    "nameSingular": "quotation",
+    "namePlural": "quotations",
+    "label": "Quotation",
+    "labelPlural": "Quotations",
+    "description": "What the firm offered to do, for how much",
+    "isCustom": true,
+    "fields": [
+      {
+        "name": "number",
+        "type": "TEXT",
+        "label": "Number",
+        "description": "Allocated per billing entity, gap-free"
+      },
+      {
+        "name": "validUntil",
+        "type": "DATE_TIME",
+        "label": "Valid until"
+      },
+      {
+        "name": "sentAt",
+        "type": "DATE_TIME",
+        "label": "Sent"
+      },
+      {
+        "name": "decidedAt",
+        "type": "DATE_TIME",
+        "label": "Answered",
+        "description": "When the client accepted or declined"
+      },
+      {
+        "name": "notes",
+        "type": "TEXT",
+        "label": "Notes"
+      },
+      {
+        "name": "pdf",
+        "type": "FILES",
+        "label": "Document",
+        "settings": {
+          "maxNumberOfValues": 5
+        }
+      },
+      {
+        "name": "status",
+        "type": "SELECT",
+        "label": "Status",
+        "options": [
+          {
+            "value": "DRAFT",
+            "label": "Draft"
+          },
+          {
+            "value": "SENT",
+            "label": "Sent"
+          },
+          {
+            "value": "ACCEPTED",
+            "label": "Accepted"
+          },
+          {
+            "value": "DECLINED",
+            "label": "Declined"
+          },
+          {
+            "value": "EXPIRED",
+            "label": "Expired"
+          }
+        ],
+        "default": "'DRAFT'"
+      },
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Name",
+        "description": "Name"
+      },
+      {
+        "name": "person",
+        "type": "RELATION",
+        "label": "Client",
+        "description": "Who it was quoted to",
+        "relationType": "MANY_TO_ONE",
+        "target": "person",
+        "joinColumn": "personId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "billingEntity",
+        "type": "RELATION",
+        "label": "Billing entity",
+        "description": "Which company is contracting. Required in practice",
+        "relationType": "MANY_TO_ONE",
+        "target": "billingEntity",
+        "joinColumn": "billingEntityId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "matter",
+        "type": "RELATION",
+        "label": "Job",
+        "description": "The job this quotes for",
+        "relationType": "MANY_TO_ONE",
+        "target": "opportunity",
+        "joinColumn": "matterId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "company",
+        "type": "RELATION",
+        "label": "Organization",
+        "description": "When the client is contracting through a company",
+        "relationType": "MANY_TO_ONE",
+        "target": "company",
+        "joinColumn": "companyId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "invoices",
+        "type": "RELATION",
+        "label": "Invoices",
+        "description": "Raised from this quotation",
+        "relationType": "ONE_TO_MANY",
+        "target": "invoice"
+      },
+      {
+        "name": "lineItems",
+        "type": "RELATION",
+        "label": "Lines",
+        "description": "What is being charged for",
+        "relationType": "ONE_TO_MANY",
+        "target": "quotationLineItem"
+      },
+      {
+        "name": "subtotal",
+        "type": "CURRENCY",
+        "label": "Subtotal",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      },
+      {
+        "name": "discount",
+        "type": "CURRENCY",
+        "label": "Discount",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      },
+      {
+        "name": "tax",
+        "type": "CURRENCY",
+        "label": "Tax",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      },
+      {
+        "name": "total",
+        "type": "CURRENCY",
+        "label": "Total",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      }
+    ]
+  },
+  {
+    "nameSingular": "conversation",
+    "namePlural": "conversations",
+    "label": "Conversation",
+    "labelPlural": "Conversations",
+    "description": "A thread of messages with one customer on one channel",
+    "isCustom": true,
+    "fields": [
+      {
+        "name": "title",
+        "type": "TEXT",
+        "label": "Title",
+        "description": "Display name of the conversation, usually the customer name reported by the channel"
+      },
+      {
+        "name": "channel",
+        "type": "SELECT",
+        "label": "Channel",
+        "description": "Which messaging provider this conversation arrived on",
+        "options": [
+          {
+            "value": "LINE",
+            "label": "LINE"
+          },
+          {
+            "value": "FACEBOOK",
+            "label": "Facebook"
+          },
+          {
+            "value": "INSTAGRAM",
+            "label": "Instagram"
+          },
+          {
+            "value": "WHATSAPP",
+            "label": "WhatsApp"
+          },
+          {
+            "value": "EMAIL",
+            "label": "Email"
+          },
+          {
+            "value": "WEBCHAT",
+            "label": "Web chat"
+          }
+        ],
+        "default": "'LINE'"
+      },
+      {
+        "name": "status",
+        "type": "SELECT",
+        "label": "Status",
+        "description": "Where the conversation sits in the handling workflow",
+        "options": [
+          {
+            "value": "OPEN",
+            "label": "Open"
+          },
+          {
+            "value": "PENDING",
+            "label": "Pending"
+          },
+          {
+            "value": "CLOSED",
+            "label": "Closed"
+          }
+        ],
+        "default": "'OPEN'"
+      },
+      {
+        "name": "lastMessageAt",
+        "type": "DATE_TIME",
+        "label": "Last message at",
+        "description": "Timestamp of the most recent message in the thread"
+      },
+      {
+        "name": "lastMessagePreview",
+        "type": "TEXT",
+        "label": "Last message",
+        "description": "Cached first line of the most recent message"
+      },
+      {
+        "name": "unreadCount",
+        "type": "NUMBER",
+        "label": "Unread",
+        "description": "Number of inbound messages not yet read by an agent",
+        "default": 0
+      },
+      {
+        "name": "externalId",
+        "type": "TEXT",
+        "label": "Provider thread ID",
+        "description": "Provider-side thread identifier, used to deduplicate incoming events"
+      },
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Name",
+        "description": "Name"
+      },
+      {
+        "name": "person",
+        "type": "RELATION",
+        "label": "Contact",
+        "description": "The CRM contact this conversation belongs to",
+        "relationType": "MANY_TO_ONE",
+        "target": "person",
+        "joinColumn": "personId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "assignee",
+        "type": "RELATION",
+        "label": "Assignee",
+        "description": "Agent currently responsible for this conversation",
+        "relationType": "MANY_TO_ONE",
+        "target": "workspaceMember",
+        "joinColumn": "assigneeId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "messages",
+        "type": "RELATION",
+        "label": "Messages",
+        "description": "Messages in this conversation",
+        "relationType": "ONE_TO_MANY",
+        "target": "inboxMessage"
+      },
+      {
+        "name": "channelAccount",
+        "type": "RELATION",
+        "label": "Channel account",
+        "description": "The connected account this conversation arrived on",
+        "relationType": "MANY_TO_ONE",
+        "target": "channelAccount",
+        "joinColumn": "channelAccountId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "contactIdentity",
+        "type": "RELATION",
+        "label": "Channel identity",
+        "description": "The channel handle that opened this conversation",
+        "relationType": "MANY_TO_ONE",
+        "target": "contactIdentity",
+        "joinColumn": "contactIdentityId",
+        "onDelete": "SET_NULL"
+      }
+    ]
+  },
+  {
+    "nameSingular": "quotationLineItem",
+    "namePlural": "quotationLineItems",
+    "label": "Quotation line",
+    "labelPlural": "Quotation lines",
+    "description": "One charged item",
+    "isCustom": true,
+    "fields": [
+      {
+        "name": "taxRate",
+        "type": "NUMBER",
+        "label": "Tax rate"
+      },
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Name",
+        "description": "Name"
+      },
+      {
+        "name": "lineTotal",
+        "type": "CURRENCY",
+        "label": "Line total",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      },
+      {
+        "name": "quantity",
+        "type": "NUMBER",
+        "label": "Quantity",
+        "default": 1
+      },
+      {
+        "name": "description",
+        "type": "TEXT",
+        "label": "Description"
+      },
+      {
+        "name": "product",
+        "type": "RELATION",
+        "label": "Service",
+        "description": "Where the text and price came from",
+        "relationType": "MANY_TO_ONE",
+        "target": "product",
+        "joinColumn": "productId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "quotation",
+        "type": "RELATION",
+        "label": "Quotation",
+        "relationType": "MANY_TO_ONE",
+        "target": "quotation",
+        "joinColumn": "quotationId",
+        "onDelete": "CASCADE"
+      },
+      {
+        "name": "unitPrice",
+        "type": "CURRENCY",
+        "label": "Unit price",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      },
+      {
+        "name": "discount",
+        "type": "CURRENCY",
+        "label": "Discount",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      }
+    ]
+  },
+  {
+    "nameSingular": "payment",
+    "namePlural": "payments",
+    "label": "Payment",
+    "labelPlural": "Payments",
+    "description": "Money received against an invoice",
+    "isCustom": true,
+    "fields": [
+      {
+        "name": "reference",
+        "type": "TEXT",
+        "label": "Reference",
+        "description": "Slip reference or transaction id, as the client sent it"
+      },
+      {
+        "name": "paidAt",
+        "type": "DATE_TIME",
+        "label": "Paid"
+      },
+      {
+        "name": "externalReference",
+        "type": "TEXT",
+        "label": "FlowAccount ref"
+      },
+      {
+        "name": "notes",
+        "type": "TEXT",
+        "label": "Notes"
+      },
+      {
+        "name": "method",
+        "type": "SELECT",
+        "label": "How",
+        "options": [
+          {
+            "value": "PROMPTPAY",
+            "label": "PromptPay"
+          },
+          {
+            "value": "BANK_TRANSFER",
+            "label": "Bank transfer"
+          },
+          {
+            "value": "CASH",
+            "label": "Cash"
+          },
+          {
+            "value": "CARD",
+            "label": "Card"
+          },
+          {
+            "value": "OTHER",
+            "label": "Other"
+          }
+        ],
+        "default": "'PROMPTPAY'"
+      },
+      {
+        "name": "status",
+        "type": "SELECT",
+        "label": "Status",
+        "options": [
+          {
+            "value": "PENDING",
+            "label": "Not confirmed"
+          },
+          {
+            "value": "CONFIRMED",
+            "label": "Confirmed"
+          },
+          {
+            "value": "FAILED",
+            "label": "Failed"
+          }
+        ],
+        "default": "'PENDING'"
+      },
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Name",
+        "description": "Name"
+      },
+      {
+        "name": "invoice",
+        "type": "RELATION",
+        "label": "Invoice",
+        "description": "What this pays for",
+        "relationType": "MANY_TO_ONE",
+        "target": "invoice",
+        "joinColumn": "invoiceId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "billingEntity",
+        "type": "RELATION",
+        "label": "Billing entity",
+        "description": "Which company received it",
+        "relationType": "MANY_TO_ONE",
+        "target": "billingEntity",
+        "joinColumn": "billingEntityId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "amount",
+        "type": "CURRENCY",
+        "label": "Amount",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      }
+    ]
+  },
+  {
+    "nameSingular": "product",
+    "namePlural": "products",
+    "label": "Service",
+    "labelPlural": "Services",
+    "description": "Something the firm charges for, and what it normally costs",
+    "isCustom": true,
+    "fields": [
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Service"
+      },
+      {
+        "name": "code",
+        "type": "TEXT",
+        "label": "Code",
+        "description": "Optional short reference used on documents"
+      },
+      {
+        "name": "description",
+        "type": "TEXT",
+        "label": "Description",
+        "description": "Copied onto a quotation line as its starting text"
+      },
+      {
+        "name": "taxRate",
+        "type": "NUMBER",
+        "label": "Tax rate",
+        "description": "Percent. Twenty has no tax concept, so this is ours"
+      },
+      {
+        "name": "category",
+        "type": "TEXT",
+        "label": "Category"
+      },
+      {
+        "name": "isActive",
+        "type": "BOOLEAN",
+        "label": "Offered",
+        "description": "Turn off to retire it. Old documents must keep resolving",
+        "default": true
+      },
+      {
+        "name": "unit",
+        "type": "SELECT",
+        "label": "Charged per",
+        "options": [
+          {
+            "value": "ITEM",
+            "label": "Item"
+          },
+          {
+            "value": "HOUR",
+            "label": "Hour"
+          },
+          {
+            "value": "CASE",
+            "label": "Job"
+          },
+          {
+            "value": "MONTH",
+            "label": "Month"
+          }
+        ],
+        "default": "'ITEM'"
+      },
+      {
+        "name": "quotationLineItems",
+        "type": "RELATION",
+        "label": "Quoted on",
+        "description": "Quotation lines drawn from this service",
+        "relationType": "ONE_TO_MANY",
+        "target": "quotationLineItem"
+      },
+      {
+        "name": "invoiceLineItems",
+        "type": "RELATION",
+        "label": "Invoiced on",
+        "description": "Invoice lines drawn from this service",
+        "relationType": "ONE_TO_MANY",
+        "target": "invoiceLineItem"
+      },
+      {
+        "name": "unitPrice",
+        "type": "CURRENCY",
+        "label": "Price",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      }
+    ]
+  },
+  {
+    "nameSingular": "contactIdentity",
+    "namePlural": "contactIdentities",
+    "label": "Contact identity",
+    "labelPlural": "Contact identities",
+    "description": "One customer handle on one channel. A person can hold several: a LINE user id, an Instagram handle, a phone number",
+    "isCustom": true,
+    "fields": [
+      {
+        "name": "displayName",
+        "type": "TEXT",
+        "label": "Display name",
+        "description": "The name the provider reports for this handle"
+      },
+      {
+        "name": "channel",
+        "type": "SELECT",
+        "label": "Channel",
+        "description": "Which messaging provider this handle belongs to",
+        "options": [
+          {
+            "value": "LINE",
+            "label": "LINE"
+          },
+          {
+            "value": "FACEBOOK",
+            "label": "Facebook"
+          },
+          {
+            "value": "INSTAGRAM",
+            "label": "Instagram"
+          },
+          {
+            "value": "WHATSAPP",
+            "label": "WhatsApp"
+          },
+          {
+            "value": "EMAIL",
+            "label": "Email"
+          },
+          {
+            "value": "WEBCHAT",
+            "label": "Web chat"
+          }
+        ],
+        "default": "'LINE'"
+      },
+      {
+        "name": "externalId",
+        "type": "TEXT",
+        "label": "Provider handle",
+        "description": "The provider-side identifier of the customer, such as a LINE user id"
+      },
+      {
+        "name": "avatarUrl",
+        "type": "TEXT",
+        "label": "Avatar URL",
+        "description": "Profile picture reported by the provider"
+      },
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Name",
+        "description": "Name"
+      },
+      {
+        "name": "person",
+        "type": "RELATION",
+        "label": "Contact",
+        "description": "The CRM contact this handle resolves to",
+        "relationType": "MANY_TO_ONE",
+        "target": "person",
+        "joinColumn": "personId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "conversations",
+        "type": "RELATION",
+        "label": "Conversations",
+        "description": "Conversations opened by this handle",
+        "relationType": "ONE_TO_MANY",
+        "target": "conversation"
+      }
+    ]
+  },
+  {
+    "nameSingular": "invoiceLineItem",
+    "namePlural": "invoiceLineItems",
+    "label": "Invoice line",
+    "labelPlural": "Invoice lines",
+    "description": "One charged item",
+    "isCustom": true,
+    "fields": [
+      {
+        "name": "description",
+        "type": "TEXT",
+        "label": "Description"
+      },
+      {
+        "name": "quantity",
+        "type": "NUMBER",
+        "label": "Quantity",
+        "default": 1
+      },
+      {
+        "name": "taxRate",
+        "type": "NUMBER",
+        "label": "Tax rate"
+      },
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Name",
+        "description": "Name"
+      },
+      {
+        "name": "invoice",
+        "type": "RELATION",
+        "label": "Invoice",
+        "relationType": "MANY_TO_ONE",
+        "target": "invoice",
+        "joinColumn": "invoiceId",
+        "onDelete": "CASCADE"
+      },
+      {
+        "name": "product",
+        "type": "RELATION",
+        "label": "Service",
+        "description": "Where the text and price came from",
+        "relationType": "MANY_TO_ONE",
+        "target": "product",
+        "joinColumn": "productId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "unitPrice",
+        "type": "CURRENCY",
+        "label": "Unit price",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      },
+      {
+        "name": "discount",
+        "type": "CURRENCY",
+        "label": "Discount",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      },
+      {
+        "name": "lineTotal",
+        "type": "CURRENCY",
+        "label": "Line total",
+        "default": {
+          "amountMicros": null,
+          "currencyCode": "'THB'"
+        }
+      }
+    ]
+  },
+  {
+    "nameSingular": "channelAccount",
+    "namePlural": "channelAccounts",
+    "label": "Channel account",
+    "labelPlural": "Channel accounts",
+    "description": "A connected messaging account, such as one LINE Official Account or one Facebook Page",
+    "isCustom": true,
+    "fields": [
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Name",
+        "description": "Human-readable name of the connected account"
+      },
+      {
+        "name": "channel",
+        "type": "SELECT",
+        "label": "Channel",
+        "description": "Which messaging provider this account belongs to",
+        "options": [
+          {
+            "value": "LINE",
+            "label": "LINE"
+          },
+          {
+            "value": "FACEBOOK",
+            "label": "Facebook"
+          },
+          {
+            "value": "INSTAGRAM",
+            "label": "Instagram"
+          },
+          {
+            "value": "WHATSAPP",
+            "label": "WhatsApp"
+          },
+          {
+            "value": "EMAIL",
+            "label": "Email"
+          },
+          {
+            "value": "WEBCHAT",
+            "label": "Web chat"
+          }
+        ],
+        "default": "'LINE'"
+      },
+      {
+        "name": "externalId",
+        "type": "TEXT",
+        "label": "Provider account ID",
+        "description": "The provider-side identifier of this account (LINE destination, Meta page id)"
+      },
+      {
+        "name": "isActive",
+        "type": "BOOLEAN",
+        "label": "Active",
+        "description": "Whether this account currently receives and sends messages",
+        "default": true
+      },
+      {
+        "name": "conversations",
+        "type": "RELATION",
+        "label": "Conversations",
+        "description": "Conversations received on this account",
+        "relationType": "ONE_TO_MANY",
+        "target": "conversation"
+      }
+    ]
+  },
+  {
+    "nameSingular": "workLog",
+    "namePlural": "workLogs",
+    "label": "Work log",
+    "labelPlural": "Work logs",
+    "description": "What a member of staff did, for whom, and how long it took",
+    "isCustom": true,
+    "fields": [
+      {
+        "name": "description",
+        "type": "TEXT",
+        "label": "Work",
+        "description": "One line, as it should read in a week to someone who was not there"
+      },
+      {
+        "name": "workedOn",
+        "type": "DATE",
+        "label": "Date",
+        "description": "The day the work happened, not the day it was logged"
+      },
+      {
+        "name": "minutes",
+        "type": "NUMBER",
+        "label": "Minutes",
+        "description": "Minutes rather than hours: nobody rounds 20 minutes up to 0.5"
+      },
+      {
+        "name": "isBillable",
+        "type": "BOOLEAN",
+        "label": "Billable",
+        "default": true
+      },
+      {
+        "name": "name",
+        "type": "TEXT",
+        "label": "Name",
+        "description": "Name"
+      },
+      {
+        "name": "billingEntity",
+        "type": "RELATION",
+        "label": "Billing entity",
+        "description": "Which of the three the work was done under",
+        "relationType": "MANY_TO_ONE",
+        "target": "billingEntity",
+        "joinColumn": "billingEntityId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "matter",
+        "type": "RELATION",
+        "label": "Job",
+        "description": "The job the work was against",
+        "relationType": "MANY_TO_ONE",
+        "target": "opportunity",
+        "joinColumn": "matterId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "person",
+        "type": "RELATION",
+        "label": "Client",
+        "description": "For work that is not against a job yet",
+        "relationType": "MANY_TO_ONE",
+        "target": "person",
+        "joinColumn": "personId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "booking",
+        "type": "RELATION",
+        "label": "Booking",
+        "description": "The appointment this came out of, when it came out of one",
+        "relationType": "MANY_TO_ONE",
+        "target": "booking",
+        "joinColumn": "bookingId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "staff",
+        "type": "RELATION",
+        "label": "Staff",
+        "description": "Who did the work",
+        "relationType": "MANY_TO_ONE",
+        "target": "workspaceMember",
+        "joinColumn": "staffId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "notes",
+        "type": "TEXT",
+        "label": "Notes",
+        "description": "Where it stands, for whoever reads this next"
+      },
+      {
+        "name": "practiceArea",
+        "type": "RELATION",
+        "label": "Category",
+        "description": "The kind of work this was",
+        "relationType": "MANY_TO_ONE",
+        "target": "practiceArea",
+        "joinColumn": "practiceAreaId",
+        "onDelete": "SET_NULL"
+      },
+      {
+        "name": "status",
+        "type": "SELECT",
+        "label": "Status",
+        "description": "Where this piece of work got to",
+        "options": [
+          {
+            "value": "NOT_STARTED",
+            "label": "Not started"
+          },
+          {
+            "value": "IN_PROGRESS",
+            "label": "In progress"
+          },
+          {
+            "value": "DONE",
+            "label": "Done"
+          },
+          {
+            "value": "POSTPONED",
+            "label": "Postponed"
+          },
+          {
+            "value": "CANCELLED",
+            "label": "Cancelled"
+          }
+        ],
+        "default": "'IN_PROGRESS'"
+      }
+    ]
+  }
+]
