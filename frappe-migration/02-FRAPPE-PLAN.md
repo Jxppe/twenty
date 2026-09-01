@@ -8,7 +8,7 @@ One custom app on the bare Frappe framework. Nothing else installed. `00-BRIEF.m
 
 ```
 apps/<firm_app>/<firm_app>/
-  crm/doctype/         organization, matter, practice_area, billing_entity, booking,
+  crm/doctype/         client, matter, practice_area, billing_entity, booking,
                        matter_deadline, required_document
   work/doctype/        work_log
   billing/doctype/     service, quotation, quotation_line, invoice, invoice_line, payment
@@ -18,7 +18,37 @@ apps/<firm_app>/<firm_app>/
   public/frontend/     frappe-ui SPA
 ```
 
-Contacts sit on Frappe's stock `Contact` doctype with the Thai name fields added. Organizations are a plain custom doctype, not `Customer`, since nothing here needs a party ledger.
+See the client model below before writing any of it. It is the one place this deliberately diverges from the Twenty model.
+
+## The client model
+
+Get this right first. Everything links to it.
+
+**Twenty's shape is an artifact, do not copy it.** Twenty has `person` and `company` as separate built-in objects, which is why `quotation` and `invoice` in `01-DATA-MODEL.md` each carry *both* a `person` link and a `company` link. Every query and every report then has to coalesce two nullable fields, and nothing prevents a record having both set or neither. Frappe does not force that, so collapse it.
+
+**`Client`, one doctype, the party.** A `client_type` Select of `INDIVIDUAL` or `ORGANIZATION` drives which fields show.
+
+| field | applies to | note |
+|---|---|---|
+| `client_type` | both | INDIVIDUAL or ORGANIZATION |
+| `client_name_en`, `client_name_th` | both | both print on documents, neither is derivable from the other |
+| `legal_name_en`, `legal_name_th` | organization | registered name exactly as it must appear on an invoice |
+| `tax_id` | organization | Thai taxpayer identification number |
+| `id_number`, `nationality` | individual | passport or Thai ID. A visa practice cannot work without these |
+| `default_billing_entity` | both | overridable per matter |
+| address | both | Frappe's stock Address doctype, linked |
+
+Matter, Work Log, Booking, Quotation and Invoice each get **one** `client` Link field, not two.
+
+**Frappe's stock `Contact` for the humans**, with a plain Link field to Client and `contact_name_th` added as a Custom Field.
+
+- An organization client has several contacts. An individual client has exactly one, created alongside them in the same form.
+- You inherit Contact's email and phone child tables, and Frappe's communication features already expect Contact.
+- **`contact_identity` links to Contact, not to Client.** A LINE handle belongs to a person, not to a company. Routing it through Contact is what lets the inbox resolve a handle to a human and the human to a client without a Dynamic Link. Do not use Dynamic Links here.
+
+The cost is one extra record per individual client. Accept it. It is the same shape ERPNext uses for Customer plus Contact, so it is well-trodden in Frappe, and it is what makes the inbox tractable later.
+
+Do not use Frappe's `Customer` doctype. It belongs to ERPNext and drags a party ledger with it.
 
 ## Type mapping
 
@@ -74,11 +104,11 @@ Do not use `hash` or `format:` naming with a plan to renumber later.
 
 ## The frontend
 
-Desk covers everything. Two screens do not deserve it.
+Desk covers everything, and nothing here needs a frontend to be usable. Two screens are worth building anyway, and both come after the data model is settled, at step 6 of the build order.
 
-**Work log entry, build this first.** Everyone in the firm touches it every day, and the system succeeds or fails on whether logging 20 minutes takes ten seconds. A generated Desk form with eight fields and four Link lookups is not that. Build a single frappe-ui screen: pick a matter, type one line, set minutes, billable on or off, save, repeat. Recent matters cached client side, keyboard driven, no page reload between entries. A week view of your own logs for correcting yesterday.
+**Work log entry, the first custom screen.** Everyone in the firm touches it every day, and the system succeeds or fails on whether logging 20 minutes takes ten seconds. A generated Desk form with eight fields and four Link lookups is not that. Build a single frappe-ui screen: pick a matter, type one line, set minutes, billable on or off, save, repeat. Recent matters cached client side, keyboard driven, no page reload between entries. A week view of your own logs for correcting yesterday.
 
-**The inbox, build this second.** Decide first whether to extend **Frappe Helpdesk** or build the four doctypes in `01-DATA-MODEL.md`. Helpdesk gives an agent inbox with threading, assignment and statuses, already on frappe-ui. It is email-first, so LINE is a custom webhook and a custom channel either way. The real question is whether Helpdesk's ticket model fits a LINE conversation, which is a running thread with no resolution state, closer to a chat than a ticket. If it does not fit without fighting it, build the four doctypes, which are small and already specified.
+**The inbox, the second.** Decide first whether to extend **Frappe Helpdesk** or build the four doctypes in `01-DATA-MODEL.md`. Helpdesk gives an agent inbox with threading, assignment and statuses, already on frappe-ui. It is email-first, so LINE is a custom webhook and a custom channel either way. The real question is whether Helpdesk's ticket model fits a LINE conversation, which is a running thread with no resolution state, closer to a chat than a ticket. If it does not fit without fighting it, build the four doctypes, which are small and already specified.
 
 LINE specifics that hold either way:
 - One `channelAccount` per LINE Official Account, keyed by the LINE destination id.
@@ -89,15 +119,15 @@ Everything else stays in Desk until someone complains about a specific screen.
 
 ## Build order
 
-The focus is the work log and the client record, so build in that order, not in dependency-elegance order.
+The spine is **Client, then Matter, then Work Log**. Build that end to end first, so there is a working system to look at, then hang the leaves off it. Billing and the inbox come last because neither is what the firm is asking for.
 
-1. **Reference data.** Billing Entity, Practice Area. Small, and everything hangs off them.
-2. **Contact and Organization**, with the Thai name fields.
-3. **Matter**, with Matter Deadline and Required Document.
-4. **Work Log** in Desk, wired to matter, client, booking, staff and practice area. Get the model right here before making it pretty.
-5. **Booking**, and the work-log-from-booking path.
-6. **The frappe-ui work log screen.** By this point you know the model holds.
+1. **Client and Contact.** The centre of the system. Thai name fields, both client types, one contact auto-created for individuals.
+2. **Billing Entity and Practice Area.** Small reference data, but Matter needs both.
+3. **Matter**, linked to Client, with the practice area driving the default billing entity.
+4. **Work Log**, linked to Matter, Client, staff and practice area. Get the model right in Desk before making it pretty. The spine is now complete and the firm could actually use this.
+5. **Matter Deadline, Required Document, Booking.** Leaves off Matter and Client, in any order. Booking brings the work-log-from-booking path.
+6. **The frappe-ui work log screen.** By now you know the model holds and can build the fast entry path against something stable.
 7. **Billing.** Service, Quotation with its line table, per-entity numbering, print format with a Thai font proven first. Then Invoice, Payment, and the status derivation. FlowAccount reference fields are plain Data plus a URL, no integration.
 8. **The inbox.**
 
-Steps 1 to 5 and 7 are usable in Desk with no frontend work at all.
+Everything except step 6 is usable in Desk with no frontend work at all.

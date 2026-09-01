@@ -4,13 +4,13 @@ Hand this file, `01-DATA-MODEL.md`, `02-FRAPPE-PLAN.md` and `schema.json` to the
 
 ## What this is, and what it is not
 
-**A work log and CRM system for a small Thai law / visa services firm, with some finance attached.** The work log and the client record are the point. Quotations, invoices and payments exist because the firm has to send documents to clients, not because anyone wants to run accounting here.
+**A work log and CRM system for a small Thai law / visa services firm, with some finance attached.** The client record is the foundation and the work log is what the firm uses it for. Quotations, invoices and payments exist because the firm has to send documents to clients, not because anyone wants to run accounting here.
 
-Read that as a ranking, because it decides everything below. If a design choice makes work logging faster at the cost of the billing model, take it.
+Read that as a ranking, because it decides everything below. The client and the matter get built first because everything hangs off them. The work log gets the care, because it is what staff touch every day and it is what the system lives or dies on. Billing and the inbox come after both. If a design choice makes work logging faster at the cost of the billing model, take it.
 
 ## Scope
 
-- Clients, as individuals and as companies, with names in both English and Thai
+- Clients, as individuals and as organizations, with names in both English and Thai, and the contact people inside an organization
 - Jobs (called "matters" in the code, mapped onto Twenty's `opportunity` object), each with a type of work, an owner, deadlines and a list of documents the client still owes us
 - **Staff work logs**, in minutes, against a matter or a client, marked billable or not, with a status
 - Appointments and consultations, which work logs can come out of
@@ -85,5 +85,5 @@ The pattern in use, which carries over unchanged:
 
 Two real gotchas:
 
-1. **Full-text search does not segment Thai.** Thai is written without spaces, so a whole phrase becomes one token. Twenty works around this with an ILIKE fallback when the tsvector query returns nothing. Frappe's search has the same weakness. Plan on substring matching for Thai content, or a proper segmenter, and do not assume the built-in search will find a Thai word in the middle of a sentence. This matters more here than it looks, because work log descriptions are the thing people will search.
+1. **Full-text search does not segment Thai.** Thai is written without spaces, so a whole phrase becomes one token, and Frappe's search has the same weakness Twenty does. In practice this barely matters here: the Thai search that people actually do is finding a client by their Thai name, and a name is a short whole field value that substring matching finds fine. Nobody searches the middle of a work log description. Do not build a segmenter.
 2. **PDF output needs a Thai font.** Print formats must ship a font with Thai glyphs, Sarabun or Noto Sans Thai, and the PDF renderer has to be configured to use it. Thai text silently renders as boxes otherwise. Prove this with a real Thai string in a generated PDF before building any print format on top of it.
