@@ -77,8 +77,8 @@ apps/tll_crm/tll_crm/
                        job_deadline, required_document
   work/doctype/        work_log, timeline_entry
   billing/doctype/     service, quotation, quotation_line, invoice, invoice_line, payment
-  inbox/doctype/       channel_account, contact_identity, conversation, inbox_message
-  inbox/webhooks/      line.py, meta.py
+  intake/doctype/      contact_identity
+  intake/api.py        the Takdai intake endpoint
   print_format/        quotation, invoice
   public/frontend/     frappe-ui SPA
 ```
@@ -96,6 +96,7 @@ Get this right first. Everything links to it.
 | field | applies to | note |
 |---|---|---|
 | `client_type` | both | INDIVIDUAL or ORGANIZATION |
+| `status` | both | LEAD, ACTIVE, INACTIVE. A lead is a client we have not confirmed, not a separate table |
 | `client_name_en`, `client_name_th` | both | both print on documents, neither is derivable from the other |
 | `legal_name_en`, `legal_name_th` | organization | registered name exactly as it must appear on an invoice |
 | `tax_id` | organization | Thai taxpayer identification number |
@@ -111,9 +112,10 @@ Job, Work Log, Booking, Quotation and Invoice each get **one** `client` Link fie
 
 - An organization client has several contacts. An individual client has exactly one, created alongside them in the same form.
 - You inherit Contact's email and phone child tables, and Frappe's communication features already expect Contact.
-- **`contact_identity` links to Contact, not to Client.** A LINE handle belongs to a person, not to a company. Routing it through Contact is what lets the inbox resolve a handle to a human and the human to a client without a Dynamic Link. Do not use Dynamic Links here.
+- **`contact_identity` links to Contact, not to Client.** A LINE handle belongs to a person, not to a company. Routing it through Contact is what lets intake resolve a handle to a human and the human to a client without a Dynamic Link. Do not use Dynamic Links here.
+- `contact_identity` carries `channel`, `external_id`, `display_name` and **`chat_url`**, the deep link that opens the conversation in Takdai.
 
-The cost is one extra record per individual client. Accept it. It is the same shape ERPNext uses for Customer plus Contact, so it is well-trodden in Frappe, and it is what makes the inbox tractable later.
+The cost is one extra record per individual client. Accept it. It is the same shape ERPNext uses for Customer plus Contact, so it is well-trodden in Frappe, and it is what lets intake resolve a chat handle to a client without a Dynamic Link.
 
 Do not use Frappe's `Customer` doctype. It belongs to ERPNext and drags a party ledger with it.
 
@@ -121,7 +123,7 @@ Do not use Frappe's `Customer` doctype. It belongs to ERPNext and drags a party 
 
 The feature the system is judged on, and the one place where a naive implementation will not hold up.
 
-Entries come from doctypes with different date fields: work log uses the day worked, booking uses its start time, inbox message uses sent time, invoice uses issue date. Querying six doctypes per client page and merging in Python is fine at 6 clients and miserable at 600.
+Entries come from doctypes with different date fields: work log uses the day worked, booking uses its start time, an intake event uses when it arrived, invoice uses issue date. Querying six doctypes per client page and merging in Python is fine at 6 clients and miserable at 600.
 
 **`Timeline Entry`, append-only, written by controller hooks and never by hand.**
 
@@ -181,9 +183,45 @@ Billing:
 - `Invoice.status` derives from `amountPaid` against `total` and `dueDate`. Only DRAFT, VOID and manual transitions are set by hand.
 - Accepting a quotation stamps `decidedAt` and creates the invoice by **copying** the lines, not linking them.
 
-Inbox:
-- `Conversation.lastMessageAt`, `lastMessagePreview` and `unreadCount` update when an InboxMessage is inserted.
-- Unique index on `externalId` for both conversation and message, so redelivered webhooks are idempotent.
+Intake:
+- Intake deduplicates on `event_id`. See the intake section.
+
+## Intake from Takdai
+
+Conversations live in Takdai Chat. This system never renders an inbox, stores a message body, or talks to LINE. Takdai pushes when a lead is confirmed or a booking is requested, and staff click back into the conversation from the client record.
+
+One whitelisted method:
+
+```
+POST /api/method/tll_crm.intake.api.receive
+Authorization: token <api_key>:<api_secret>
+```
+
+Authenticate with a Frappe API key and secret on a dedicated integration user holding a narrow role, not Administrator.
+
+Payload:
+
+| field | note |
+|---|---|
+| `event_id` | required, stable per event. The idempotency key |
+| `channel` | LINE, FACEBOOK, INSTAGRAM, WHATSAPP, EMAIL, WEBCHAT |
+| `external_contact_id` | the provider handle, e.g. the LINE user id |
+| `display_name` | as the provider reports it |
+| `phone`, `email` | when known |
+| `chat_url` | deep link that opens this conversation in Takdai |
+| `note` | free text summary from whoever confirmed the lead |
+| `wants_booking`, `preferred_time` | optional |
+
+Behaviour, in order:
+
+1. Reject a duplicate `event_id` and return the previous result. **Not optional.** Webhooks retry, and without this a network hiccup creates duplicate clients.
+2. Find `contact_identity` by `(channel, external_id)`, or create it with the `chat_url`.
+3. Find its Contact, or create one, and a Client with `status = LEAD`.
+4. If `wants_booking`, create a Booking with `status = REQUESTED`.
+5. Write a Timeline Entry carrying the note and the `chat_url`.
+6. Return the client id so Takdai can store it and stop re-sending.
+
+Two Takdai capabilities to confirm before writing this: that it can call a webhook on those events, and that its per-conversation URL is stable. If it cannot push, fall back to a scheduled pull or to staff pasting links, both worse but workable.
 
 ## Numbering
 
@@ -195,36 +233,31 @@ Do not use `hash` or `format:` naming with a plan to renumber later.
 
 ## The frontend
 
-Desk covers everything and nothing here needs a frontend to be usable. Three screens are worth building anyway, in this order, all after the data model is settled.
+Desk covers everything and nothing here needs a frontend to be usable. Two screens are worth building anyway, in this order, both after the data model is settled.
 
 **The client page, the flagship.** This is what the system is for. One screen showing identity and contact details, the contact people, every job for this client with its status, and the merged timeline from `Timeline Entry`, filterable by type and by job. Open items surfaced without hunting: outstanding deadlines, documents still owed, unpaid invoices. Everything on it is one indexed query plus the jobs list.
 
 **Fast work log entry, second.** Everyone touches it every day and the system succeeds or fails on whether logging 20 minutes takes ten seconds. A Desk form with eight fields and four Link lookups is not that. It does not need to be its own screen: a panel on the client and job pages is better, because it puts logging where the context already is. Pick a job, type one line, set minutes, billable on or off, save, repeat. Recent jobs cached client side, keyboard driven, no reload between entries. Plus a week view of your own logs for correcting yesterday.
 
-**The inbox, third.** Decide first whether to extend **Frappe Helpdesk** or build the four doctypes in `01-DATA-MODEL.md`. Helpdesk gives an agent inbox with threading, assignment and statuses, already on frappe-ui. It is email-first, so LINE is a custom webhook and a custom channel either way. The real question is whether Helpdesk's ticket model fits a LINE conversation, which is a running thread with no resolution state, closer to a chat than a ticket. If it does not fit without fighting it, build the four doctypes, which are small and already specified. Either way, inbound messages must write `Timeline Entry` rows so they appear on the client page.
-
-LINE specifics that hold either way:
-- One `channel_account` per LINE Official Account, keyed by the LINE destination id.
-- Inbound events resolve `contact_identity` by LINE user id, then to a Contact, then to a Client. Unknown handles create a `contact_identity` with no contact attached, for someone to merge later.
-- Deduplicate on the provider message id. LINE redelivers.
+There is no third screen. The inbox was going to be one, and it now lives in Takdai.
 
 Everything else stays in Desk until someone complains about a specific screen.
 
 ## Build order
 
-The spine is **Client, then Job, then the things that happen to them**. Build enough of that to fill a timeline, then build the client page, which is the point of the system. Billing and the inbox come last.
+The spine is **Client, then Job, then the things that happen to them**. Build enough of that to fill a timeline, then build the client page, which is the point of the system.
 
-1. **Client and Contact.** The centre of the system. Thai name fields, both client types, one contact created alongside each individual client.
+1. **Client and Contact.** The centre of the system. Thai name fields, both client types, `status` for LEAD, one contact created alongside each individual client.
 2. **Billing Entity and Practice Area.** Small reference data, but Job needs both.
 3. **Job**, linked to Client, with the practice area driving the default billing entity.
-4. **Work Log and Timeline Entry together.** Work log is the first timeline feed, so build the shared write helper here and get its shape right before five more doctypes call it.
+4. **Work Log and Timeline Entry together.** Work log is the first timeline feed, so build the shared write helper here and get its shape right before the others call it.
 5. **Booking, Job Deadline, Required Document**, each writing timeline entries through the same helper.
 6. **The client page** in frappe-ui. By now there is a real timeline to render and a real job list to show.
 7. **Fast work log entry**, as a panel on the client and job pages.
-8. **Billing.** Service, Quotation with its line table, per-entity numbering, print format with a Thai font proven first. Then Invoice, Payment, and the status derivation. All three write timeline entries. FlowAccount reference fields are plain Data plus a URL, no integration.
-9. **The inbox.**
+8. **Contact Identity and the Takdai intake endpoint.** Small, and it can move earlier if Takdai is ready before the firm is.
+9. **Billing.** Service, Quotation with its line table, per-entity numbering, print format with a Thai font proven first. Then Invoice, Payment, and the status derivation. All three write timeline entries. FlowAccount reference fields are plain Data plus a URL, no integration.
 
-Steps 1 to 5 and 8 are usable in Desk with no frontend work at all.
+Everything except steps 6 and 7 is usable in Desk with no frontend work at all.
 
 ## Naming
 

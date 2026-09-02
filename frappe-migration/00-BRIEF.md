@@ -15,13 +15,13 @@ Read that as a ranking. When a design choice trades away the completeness of the
 ## Scope
 
 - Clients, as individuals and as organizations, with names in both English and Thai, and the contact people inside an organization
-- A single client timeline merging work logs, bookings, messages, notes, documents received, quotations, invoices and payments into one chronological view
+- A single client timeline merging work logs, bookings, intake events, notes, documents received, quotations, invoices and payments into one chronological view
 - Jobs (`opportunity` in Twenty, labelled "Job" there, and `Job` in the new system), each with a type of work, an owner, deadlines and a list of documents the client still owes us
 - **Staff work logs**, in minutes, against a job or a client, marked billable or not, with a status
 - Appointments and consultations, which work logs can come out of
 - Three separate legal entities of the firm, each billing under its own name and tax ID
 - Quotations, then invoices raised from them, then payments against those invoices
-- An inbound message inbox across LINE, Facebook, Instagram, WhatsApp, email and web chat, with each customer handle resolving back to one CRM contact
+- Leads and booking requests arriving from Takdai Chat over an API, with each customer handle resolving back to one CRM contact and a link back into the conversation
 
 Currency is THB everywhere. Money is stored in Twenty as integer micros (value x 1,000,000) plus a currency code, which is a Twenty storage detail and should not carry over. Use decimal.
 
@@ -39,7 +39,8 @@ This was evaluated properly, not assumed. See the rejected options below.
 - **Tax is per line.** `taxRate` sits on the service and is copied to each quotation and invoice line. Twenty has no tax concept at all, which is one of the reasons for moving.
 - **Work logs are in minutes, not hours.** Nobody rounds 20 minutes up to half an hour honestly, so do not make them.
 - **Everything that happens is attached to a client, even when there is no job yet.** A work log, a booking or a conversation must carry a client link whether or not a job exists. This is what guarantees the client timeline is never missing something. In Twenty this is why `workLog.person` exists alongside `workLog.matter`.
-- **Messaging handles are separate from contacts.** One person can hold a LINE user id, an Instagram handle and a phone number. `contactIdentity` models the handle, `person` models the human, and inbound webhooks resolve one to the other. Provider message and thread ids are stored so redelivered webhooks deduplicate.
+- **Messaging handles are separate from contacts.** One person can hold a LINE user id, an Instagram handle and a phone number. `contact_identity` models the handle, Contact models the human, and intake resolves one to the other.
+- **Every intake event carries an id and is deduplicated on it.** Webhooks retry. Without this a network hiccup creates duplicate clients.
 
 ## Data to migrate
 
@@ -79,6 +80,16 @@ Rejected because the finance half is not what this system is for. ERPNext contri
 - **Frappe framework** is the backend, DocTypes and Desk. We are using it for everything.
 - **Frappe CRM** is a finished sales CRM product built with the other two. This is the one that was rejected, and only as a base to build on.
 
+### Chat lives in Takdai, not here
+
+**Decided late, and it removes a large slice of the original scope.** Conversations stay in Takdai Chat. This system does not render an inbox, store message bodies, or connect to LINE.
+
+Takdai pushes to a single intake endpoint when a lead is confirmed or a booking is requested. The CRM creates or finds the client, optionally creates a booking, and stores a deep link back into the Takdai conversation for staff to click. `conversation`, `inboxMessage` and `channelAccount` in `01-DATA-MODEL.md` are therefore **not** rebuilt. `contactIdentity` survives, carrying the chat link.
+
+Two Takdai capabilities this depends on, to confirm before building the endpoint: that it can call a webhook on those events, and that it exposes a stable per-conversation URL. If it cannot push, the fallback is polling or staff pasting links, both worse but workable.
+
+**This weakens the case for leaving Twenty and the record should say so.** The inbox was the one thing Twenty structurally could not do; Twenty can receive leads over its own API perfectly well. What remains is document generation, per-line tax, per-entity numbering and somewhere to put computed fields, none of which Twenty has and all of which Frappe does natively. If the firm decides documents stay in FlowAccount permanently, revisit this decision honestly rather than defending it.
+
 ### Rejected: building on Frappe CRM
 
 Frappe CRM defines 39 of its own doctypes, including `CRM Lead`, `CRM Deal`, `CRM Organization`, `CRM Contacts`, `CRM Task` and `FCRM Note`. It uses the stock `Contact` doctype, but organizations, tasks and notes are all its own.
@@ -113,10 +124,6 @@ This question has come up repeatedly. The test is two questions, in order:
 2. **What does adding a custom object cost?** If the platform generates a usable list view, form, permissions and API from a schema definition, adding sixteen objects is cheap and the platform is a candidate. If every object needs hand-written backend and frontend code, the product's existing screens are worth very little to us, because we will not use them.
 
 Frappe passes the second test. Frappe CRM, BottleCRM and every polished sales CRM fail it, because their value is the screens they already have, and we need different screens.
-
-### Open: Frappe Helpdesk for the inbox
-
-Not rejected, not decided. See the inbox section of `02-FRAPPE-PLAN.md`.
 
 ## Thai and English
 
