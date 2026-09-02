@@ -6,28 +6,61 @@ One custom app on the bare Frappe framework. Nothing else installed. `00-BRIEF.m
 
 ## Bootstrap
 
-**Nothing is forked.** A Frappe custom app is not a fork. `bench new-app` generates an empty scaffold that is your repo from commit one, with no upstream history to carry and no merges to take.
+**Nothing is forked, and nothing is cloned into an empty repo.** A Frappe custom app is not a fork. `bench new-app` generates the app *and* git-inits it, so `apps/tll_crm` is the repo. Create an empty GitHub repo with no README or licence, and push the scaffold up to it afterwards.
+
+`frappe_docker` is throwaway infrastructure that lives somewhere else entirely and is never pushed to.
+
+```
+~/dev/frappe_docker/          Frappe's repo, throwaway
+  .devcontainer/
+  development/                git-ignored, mounted into the container
+    frappe-bench/             created by bench init
+      apps/
+        frappe/               the framework, cloned by bench
+        tll_crm/              the only repo we own
+      sites/
+        tll.localhost/
+```
 
 Do not clone Frappe CRM to build on. Clone it separately, in a folder you never build in, if you want to read its frappe-ui code as a reference.
 
-Dev environment via [`frappe/frappe_docker`](https://github.com/frappe/frappe_docker):
+On the host:
 
 ```bash
-git clone https://github.com/frappe/frappe_docker
+git clone https://github.com/frappe/frappe_docker.git
 cd frappe_docker
 cp -R devcontainer-example .devcontainer
+cp -R development/vscode-example development/.vscode
 # open in VSCode, "Reopen in Container"
 ```
 
-Inside the container:
+Inside the container, as the `frappe` user. The `set-config` lines are not optional: without them bench looks for MariaDB and Redis on localhost and fails.
 
 ```bash
-bench init --frappe-branch version-16 frappe-bench
+cd /workspace/development
+bench init --skip-redis-config-generation --frappe-branch version-16 frappe-bench
 cd frappe-bench
-bench new-site tll.localhost
+
+bench set-config -g db_host mariadb
+bench set-config -g redis_cache redis://redis-cache:6379
+bench set-config -g redis_queue redis://redis-queue:6379
+bench set-config -g redis_socketio redis://redis-queue:6379
+
+bench new-site --mariadb-user-host-login-scope=% tll.localhost
 bench new-app tll_crm
 bench --site tll.localhost install-app tll_crm
 bench start
+```
+
+Then push the app:
+
+```bash
+cd apps/tll_crm
+mkdir docs                    # the four md files plus schema.json; CLAUDE.md at the root
+git add -A
+git commit -m "Scaffold tll_crm with migration brief and data model"
+git remote add origin https://github.com/<owner>/tll_crm.git
+git push -u origin main
 ```
 
 `version-16` is current stable and `version-15` is still maintained. Nothing here constrains the choice, since ERPNext is not installed.
