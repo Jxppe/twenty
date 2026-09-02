@@ -97,6 +97,23 @@ Not taken, for two reasons. Staff would work contacts at `/crm` and everything e
 
 Revisit if the firm turns out to want a real enquiry pipeline, which `CRM Lead` and `CRM Deal` would give for free.
 
+### Rejected: BottleCRM
+
+[`MicroPyramid/Django-CRM`](https://github.com/MicroPyramid/Django-CRM), marketed as BottleCRM. Django REST backend, SvelteKit frontend, Flutter mobile app, PostgreSQL, MIT, actively maintained. Note that `MicroPyramid/opensource-startup-crm`, which search results still surface, is a SvelteKit rewrite that was archived in November 2025. Do not clone that one.
+
+Rejected for the same reason as Frappe CRM, but the cost is higher. It is a sales CRM with no matter, work log, deadline, required document, billing entity or Thai tax concept, so all sixteen doctypes in `01-DATA-MODEL.md` would be new. In Frappe, defining a doctype generates a working list view, form, filters, permissions and REST endpoint. In BottleCRM each one is a Django model, a migration, a serializer, a viewset, and then SvelteKit list, detail and form pages, all hand-written. For a system that is almost entirely custom objects, that is the expensive direction.
+
+It would be the right call only if the person maintaining this is a strong Django developer who would rather not learn Frappe's conventions. That is a legitimate reason and it should beat any architecture argument. In that case the honest question is whether BottleCRM's sales scaffolding is worth more than starting from plain Django, given most of it would be deleted.
+
+### How to evaluate the next CRM someone suggests
+
+This question has come up repeatedly. The test is two questions, in order:
+
+1. **Does it model a matter, a work log and a client timeline?** No existing CRM does, because they are all built around a sales pipeline. So the answer is always no, and the real question is the second one.
+2. **What does adding a custom object cost?** If the platform generates a usable list view, form, permissions and API from a schema definition, adding sixteen objects is cheap and the platform is a candidate. If every object needs hand-written backend and frontend code, the product's existing screens are worth very little to us, because we will not use them.
+
+Frappe passes the second test. Frappe CRM, BottleCRM and every polished sales CRM fail it, because their value is the screens they already have, and we need different screens.
+
 ### Open: Frappe Helpdesk for the inbox
 
 Not rejected, not decided. See the inbox section of `02-FRAPPE-PLAN.md`.
