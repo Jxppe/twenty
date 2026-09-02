@@ -21,7 +21,7 @@ Read that as a ranking. When a design choice trades away the completeness of the
 - Appointments and consultations, which work logs can come out of
 - Three separate legal entities of the firm, each billing under its own name and tax ID
 - Quotations, then invoices raised from them, then payments against those invoices
-- Leads and booking requests arriving from Takdai Chat over an API, with each customer handle resolving back to one CRM contact and a link back into the conversation
+- Leads and booking requests arriving from an external chat platform over an API, with each customer handle resolving back to one CRM contact and a link back into the conversation
 
 Currency is THB everywhere. Money is stored in Twenty as integer micros (value x 1,000,000) plus a currency code, which is a Twenty storage detail and should not carry over. Use decimal.
 
@@ -80,13 +80,19 @@ Rejected because the finance half is not what this system is for. ERPNext contri
 - **Frappe framework** is the backend, DocTypes and Desk. We are using it for everything.
 - **Frappe CRM** is a finished sales CRM product built with the other two. This is the one that was rejected, and only as a base to build on.
 
-### Chat lives in Takdai, not here
+### Chat lives outside this system
 
-**Decided late, and it removes a large slice of the original scope.** Conversations stay in Takdai Chat. This system does not render an inbox, store message bodies, or connect to LINE.
+**Decided late, and it removes a large slice of the original scope.** Conversations stay in a dedicated chat platform. This system does not render an inbox, store message bodies, or connect to LINE or Meta.
 
-Takdai pushes to a single intake endpoint when a lead is confirmed or a booking is requested. The CRM creates or finds the client, optionally creates a booking, and stores a deep link back into the Takdai conversation for staff to click. `conversation`, `inboxMessage` and `channelAccount` in `01-DATA-MODEL.md` are therefore **not** rebuilt. `contactIdentity` survives, carrying the chat link.
+The chat platform pushes to a single intake endpoint when a lead is confirmed or a booking is requested. The CRM creates or finds the client, optionally creates a booking, and stores a deep link back into the conversation for staff to click. `conversation`, `inboxMessage` and `channelAccount` in `01-DATA-MODEL.md` are therefore **not** rebuilt. `contactIdentity` survives, carrying the chat link.
 
-Two Takdai capabilities this depends on, to confirm before building the endpoint: that it can call a webhook on those events, and that it exposes a stable per-conversation URL. If it cannot push, the fallback is polling or staff pasting links, both worse but workable.
+The intake endpoint is deliberately channel-agnostic, so the chat platform can change without touching the CRM. It needs exactly two things from whatever sits on the other side: the ability to call a webhook on those events, and a stable per-conversation URL.
+
+**Leading candidate: [Chatwoot](https://github.com/chatwoot/chatwoot).** MIT, self-hosted, actively developed, and it covers LINE, Facebook Messenger and Instagram first-party, alongside WhatsApp, Telegram, email and a web widget. It has a REST API, webhooks and stable conversation URLs. Two things to verify: that none of the channels the firm needs sits behind an enterprise tier in the self-hosted build, and how it handles conversation-to-contact identity.
+
+Rejected for this role: Matrix, Mattermost and Zulip are team chat, not customer messaging. Matrix's bridges to Meta mostly drive unofficial clients and risk account bans. Whatomate and `frappe_whatsapp` are WhatsApp-only, so they solve one channel out of three and would still leave Messenger and Instagram unhandled.
+
+**The real bottleneck is provider onboarding, not software.** Messenger and Instagram messaging require a Meta app, business verification and app review for the messaging permissions. LINE requires an Official Account and a Messaging API channel. That is weeks of paperwork, it is identical whatever inbox is chosen, and it should start well before the CRM needs it.
 
 **This weakens the case for leaving Twenty and the record should say so.** The inbox was the one thing Twenty structurally could not do; Twenty can receive leads over its own API perfectly well. What remains is document generation, per-line tax, per-entity numbering and somewhere to put computed fields, none of which Twenty has and all of which Frappe does natively. If the firm decides documents stay in FlowAccount permanently, revisit this decision honestly rather than defending it.
 

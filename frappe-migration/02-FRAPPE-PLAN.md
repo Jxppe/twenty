@@ -78,7 +78,7 @@ apps/tll_crm/tll_crm/
   work/doctype/        work_log, timeline_entry
   billing/doctype/     service, quotation, quotation_line, invoice, invoice_line, payment
   intake/doctype/      contact_identity
-  intake/api.py        the Takdai intake endpoint
+  intake/api.py        the chat-platform intake endpoint
   print_format/        quotation, invoice
   public/frontend/     frappe-ui SPA
 ```
@@ -113,7 +113,7 @@ Job, Work Log, Booking, Quotation and Invoice each get **one** `client` Link fie
 - An organization client has several contacts. An individual client has exactly one, created alongside them in the same form.
 - You inherit Contact's email and phone child tables, and Frappe's communication features already expect Contact.
 - **`contact_identity` links to Contact, not to Client.** A LINE handle belongs to a person, not to a company. Routing it through Contact is what lets intake resolve a handle to a human and the human to a client without a Dynamic Link. Do not use Dynamic Links here.
-- `contact_identity` carries `channel`, `external_id`, `display_name` and **`chat_url`**, the deep link that opens the conversation in Takdai.
+- `contact_identity` carries `channel`, `external_id`, `display_name` and **`chat_url`**, the deep link that opens the conversation in the chat platform.
 
 The cost is one extra record per individual client. Accept it. It is the same shape ERPNext uses for Customer plus Contact, so it is well-trodden in Frappe, and it is what lets intake resolve a chat handle to a client without a Dynamic Link.
 
@@ -186,9 +186,11 @@ Billing:
 Intake:
 - Intake deduplicates on `event_id`. See the intake section.
 
-## Intake from Takdai
+## Intake from the chat platform
 
-Conversations live in Takdai Chat. This system never renders an inbox, stores a message body, or talks to LINE. Takdai pushes when a lead is confirmed or a booking is requested, and staff click back into the conversation from the client record.
+Conversations live in a dedicated chat platform, with [Chatwoot](https://github.com/chatwoot/chatwoot) the leading candidate. This system never renders an inbox, stores a message body, or talks to LINE or Meta. The chat platform pushes when a lead is confirmed or a booking is requested, and staff click back into the conversation from the client record.
+
+Keep this endpoint channel-agnostic and free of any vendor's field names, so the chat platform can be swapped without touching the CRM.
 
 One whitelisted method:
 
@@ -208,7 +210,7 @@ Payload:
 | `external_contact_id` | the provider handle, e.g. the LINE user id |
 | `display_name` | as the provider reports it |
 | `phone`, `email` | when known |
-| `chat_url` | deep link that opens this conversation in Takdai |
+| `chat_url` | deep link that opens this conversation in the chat platform |
 | `note` | free text summary from whoever confirmed the lead |
 | `wants_booking`, `preferred_time` | optional |
 
@@ -219,9 +221,11 @@ Behaviour, in order:
 3. Find its Contact, or create one, and a Client with `status = LEAD`.
 4. If `wants_booking`, create a Booking with `status = REQUESTED`.
 5. Write a Timeline Entry carrying the note and the `chat_url`.
-6. Return the client id so Takdai can store it and stop re-sending.
+6. Return the client id so the chat platform can store it and stop re-sending.
 
-Two Takdai capabilities to confirm before writing this: that it can call a webhook on those events, and that its per-conversation URL is stable. If it cannot push, fall back to a scheduled pull or to staff pasting links, both worse but workable.
+Two capabilities required of whatever sits on the other side: it can call a webhook on those events, and its per-conversation URL is stable. If it cannot push, fall back to a scheduled pull or to staff pasting links, both worse but workable.
+
+Provider onboarding, not software, is the long pole. Messenger and Instagram need a Meta app, business verification and app review; LINE needs an Official Account and a Messaging API channel. Weeks of paperwork, identical whatever inbox is chosen, and it should be started long before this endpoint is needed.
 
 ## Numbering
 
@@ -239,7 +243,7 @@ Desk covers everything and nothing here needs a frontend to be usable. Two scree
 
 **Fast work log entry, second.** Everyone touches it every day and the system succeeds or fails on whether logging 20 minutes takes ten seconds. A Desk form with eight fields and four Link lookups is not that. It does not need to be its own screen: a panel on the client and job pages is better, because it puts logging where the context already is. Pick a job, type one line, set minutes, billable on or off, save, repeat. Recent jobs cached client side, keyboard driven, no reload between entries. Plus a week view of your own logs for correcting yesterday.
 
-There is no third screen. The inbox was going to be one, and it now lives in Takdai.
+There is no third screen. The inbox was going to be one, and it now lives in the chat platform.
 
 Everything else stays in Desk until someone complains about a specific screen.
 
@@ -254,7 +258,7 @@ The spine is **Client, then Job, then the things that happen to them**. Build en
 5. **Booking, Job Deadline, Required Document**, each writing timeline entries through the same helper.
 6. **The client page** in frappe-ui. By now there is a real timeline to render and a real job list to show.
 7. **Fast work log entry**, as a panel on the client and job pages.
-8. **Contact Identity and the Takdai intake endpoint.** Small, and it can move earlier if Takdai is ready before the firm is.
+8. **Contact Identity and the intake endpoint.** Small, and it can move earlier if the chat platform is ready before the firm is.
 9. **Billing.** Service, Quotation with its line table, per-entity numbering, print format with a Thai font proven first. Then Invoice, Payment, and the status derivation. All three write timeline entries. FlowAccount reference fields are plain Data plus a URL, no integration.
 
 Everything except steps 6 and 7 is usable in Desk with no frontend work at all.
