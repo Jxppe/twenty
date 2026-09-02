@@ -4,13 +4,18 @@ Hand this file, `01-DATA-MODEL.md`, `02-FRAPPE-PLAN.md` and `schema.json` to the
 
 ## What this is, and what it is not
 
-**A work log and CRM system for a small Thai law / visa services firm, with some finance attached.** The client record is the foundation and the work log is what the firm uses it for. Quotations, invoices and payments exist because the firm has to send documents to clients, not because anyone wants to run accounting here.
+**A CRM for a small Thai law / visa services firm, with a work log built into it and some finance attached.** The client record is the centre of the system. Everything else exists to hang off it.
 
-Read that as a ranking, because it decides everything below. The client and the matter get built first because everything hangs off them. The work log gets the care, because it is what staff touch every day and it is what the system lives or dies on. Billing and the inbox come after both. If a design choice makes work logging faster at the cost of the billing model, take it.
+The test the system has to pass: **open a client and see everything.** Who they are and how to reach them, every matter the firm has run for them, and a running timeline of everything that has happened, without hunting through separate lists.
+
+The work log is an extension of that, not a product of its own. It is how the timeline gets populated with what staff actually did, alongside bookings, messages, documents received and documents sent. Quotations, invoices and payments exist because the firm has to send documents to clients, not because anyone wants to run accounting here.
+
+Read that as a ranking. When a design choice trades away the completeness of the client record for convenience somewhere else, do not take it.
 
 ## Scope
 
 - Clients, as individuals and as organizations, with names in both English and Thai, and the contact people inside an organization
+- A single client timeline merging work logs, bookings, messages, notes, documents received, quotations, invoices and payments into one chronological view
 - Jobs (called "matters" in the code, mapped onto Twenty's `opportunity` object), each with a type of work, an owner, deadlines and a list of documents the client still owes us
 - **Staff work logs**, in minutes, against a matter or a client, marked billable or not, with a status
 - Appointments and consultations, which work logs can come out of
@@ -33,6 +38,7 @@ This was evaluated properly, not assumed. See the rejected options below.
 - **Retired services must keep resolving.** `product.isActive` is a flag, never a delete, because old quotations and invoices reference the line.
 - **Tax is per line.** `taxRate` sits on the service and is copied to each quotation and invoice line. Twenty has no tax concept at all, which is one of the reasons for moving.
 - **Work logs are in minutes, not hours.** Nobody rounds 20 minutes up to half an hour honestly, so do not make them.
+- **Everything that happens is attached to a client, even when there is no matter yet.** A work log, a booking or a conversation must carry a client link whether or not a matter exists. This is what guarantees the client timeline is never missing something. In Twenty this is why `workLog.person` exists alongside `workLog.matter`.
 - **Messaging handles are separate from contacts.** One person can hold a LINE user id, an Instagram handle and a phone number. `contactIdentity` models the handle, `person` models the human, and inbound webhooks resolve one to the other. Provider message and thread ids are stored so redelivered webhooks deduplicate.
 
 ## Data to migrate

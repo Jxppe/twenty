@@ -42,7 +42,7 @@ bench start
 apps/tll_crm/tll_crm/
   crm/doctype/         client, matter, practice_area, billing_entity, booking,
                        matter_deadline, required_document
-  work/doctype/        work_log
+  work/doctype/        work_log, timeline_entry
   billing/doctype/     service, quotation, quotation_line, invoice, invoice_line, payment
   inbox/doctype/       channel_account, contact_identity, conversation, inbox_message
   inbox/webhooks/      line.py, meta.py
@@ -72,6 +72,8 @@ Get this right first. Everything links to it.
 
 Matter, Work Log, Booking, Quotation and Invoice each get **one** `client` Link field, not two.
 
+**On Work Log, Booking and Conversation the `client` link is required and the `matter` link is optional.** Work arrives before a matter exists, and an entry with no client is invisible on the client page, which is the whole point of the system.
+
 **Frappe's stock `Contact` for the humans**, with a plain Link field to Client and `contact_name_th` added as a Custom Field.
 
 - An organization client has several contacts. An individual client has exactly one, created alongside them in the same form.
@@ -81,6 +83,30 @@ Matter, Work Log, Booking, Quotation and Invoice each get **one** `client` Link 
 The cost is one extra record per individual client. Accept it. It is the same shape ERPNext uses for Customer plus Contact, so it is well-trodden in Frappe, and it is what makes the inbox tractable later.
 
 Do not use Frappe's `Customer` doctype. It belongs to ERPNext and drags a party ledger with it.
+
+## The client timeline
+
+The feature the system is judged on, and the one place where a naive implementation will not hold up.
+
+Entries come from doctypes with different date fields: work log uses the day worked, booking uses its start time, inbox message uses sent time, invoice uses issue date. Querying six doctypes per client page and merging in Python is fine at 6 clients and miserable at 600.
+
+**`Timeline Entry`, append-only, written by controller hooks and never by hand.**
+
+| field | note |
+|---|---|
+| `client` | Link, required, indexed |
+| `matter` | Link, optional, indexed |
+| `occurred_at` | Datetime, the business time rather than creation time, indexed |
+| `entry_type` | Select: WORK_LOG, BOOKING, MESSAGE, NOTE, DOCUMENT_RECEIVED, QUOTATION_SENT, INVOICE_ISSUED, PAYMENT_RECEIVED, DEADLINE_SET, DEADLINE_MET |
+| `summary` | Data, one prerendered line |
+| `source_doctype`, `source_name` | the real record, for click-through |
+| `staff` | Link, who did it |
+
+Index on `(client, occurred_at desc)`. The client page is one query. The matter page is the same query with a matter filter. "What happened this week" is the same query again.
+
+**It is a projection, not truth.** Every entry is derivable from its source record, so a rebuild patch can regenerate the table wholesale if it drifts. Never put anything in it that does not exist somewhere else. Write entries from one shared helper called by each source doctype's `after_insert` and `on_update`, so the summary formatting lives in one place.
+
+Frappe's built-in per-document timeline of comments, emails and field changes still works and is not replaced. Timeline Entry is specifically the cross-doctype roll-up onto the client.
 
 ## Type mapping
 
@@ -136,30 +162,37 @@ Do not use `hash` or `format:` naming with a plan to renumber later.
 
 ## The frontend
 
-Desk covers everything, and nothing here needs a frontend to be usable. Two screens are worth building anyway, and both come after the data model is settled, at step 6 of the build order.
+Desk covers everything and nothing here needs a frontend to be usable. Three screens are worth building anyway, in this order, all after the data model is settled.
 
-**Work log entry, the first custom screen.** Everyone in the firm touches it every day, and the system succeeds or fails on whether logging 20 minutes takes ten seconds. A generated Desk form with eight fields and four Link lookups is not that. Build a single frappe-ui screen: pick a matter, type one line, set minutes, billable on or off, save, repeat. Recent matters cached client side, keyboard driven, no page reload between entries. A week view of your own logs for correcting yesterday.
+**The client page, the flagship.** This is what the system is for. One screen showing identity and contact details, the contact people, every matter for this client with its status, and the merged timeline from `Timeline Entry`, filterable by type and by matter. Open items surfaced without hunting: outstanding deadlines, documents still owed, unpaid invoices. Everything on it is one indexed query plus the matters list.
 
-**The inbox, the second.** Decide first whether to extend **Frappe Helpdesk** or build the four doctypes in `01-DATA-MODEL.md`. Helpdesk gives an agent inbox with threading, assignment and statuses, already on frappe-ui. It is email-first, so LINE is a custom webhook and a custom channel either way. The real question is whether Helpdesk's ticket model fits a LINE conversation, which is a running thread with no resolution state, closer to a chat than a ticket. If it does not fit without fighting it, build the four doctypes, which are small and already specified.
+**Fast work log entry, second.** Everyone touches it every day and the system succeeds or fails on whether logging 20 minutes takes ten seconds. A Desk form with eight fields and four Link lookups is not that. It does not need to be its own screen: a panel on the client and matter pages is better, because it puts logging where the context already is. Pick a matter, type one line, set minutes, billable on or off, save, repeat. Recent matters cached client side, keyboard driven, no reload between entries. Plus a week view of your own logs for correcting yesterday.
+
+**The inbox, third.** Decide first whether to extend **Frappe Helpdesk** or build the four doctypes in `01-DATA-MODEL.md`. Helpdesk gives an agent inbox with threading, assignment and statuses, already on frappe-ui. It is email-first, so LINE is a custom webhook and a custom channel either way. The real question is whether Helpdesk's ticket model fits a LINE conversation, which is a running thread with no resolution state, closer to a chat than a ticket. If it does not fit without fighting it, build the four doctypes, which are small and already specified. Either way, inbound messages must write `Timeline Entry` rows so they appear on the client page.
 
 LINE specifics that hold either way:
-- One `channelAccount` per LINE Official Account, keyed by the LINE destination id.
-- Inbound events resolve `contactIdentity` by LINE user id, then to a Contact. Unknown handles create a `contactIdentity` with no contact attached, for someone to merge later.
+- One `channel_account` per LINE Official Account, keyed by the LINE destination id.
+- Inbound events resolve `contact_identity` by LINE user id, then to a Contact, then to a Client. Unknown handles create a `contact_identity` with no contact attached, for someone to merge later.
 - Deduplicate on the provider message id. LINE redelivers.
 
 Everything else stays in Desk until someone complains about a specific screen.
 
 ## Build order
 
-The spine is **Client, then Matter, then Work Log**. Build that end to end first, so there is a working system to look at, then hang the leaves off it. Billing and the inbox come last because neither is what the firm is asking for.
+The spine is **Client, then Matter, then the things that happen to them**. Build enough of that to fill a timeline, then build the client page, which is the point of the system. Billing and the inbox come last.
 
-1. **Client and Contact.** The centre of the system. Thai name fields, both client types, one contact auto-created for individuals.
+1. **Client and Contact.** The centre of the system. Thai name fields, both client types, one contact created alongside each individual client.
 2. **Billing Entity and Practice Area.** Small reference data, but Matter needs both.
 3. **Matter**, linked to Client, with the practice area driving the default billing entity.
-4. **Work Log**, linked to Matter, Client, staff and practice area. Get the model right in Desk before making it pretty. The spine is now complete and the firm could actually use this.
-5. **Matter Deadline, Required Document, Booking.** Leaves off Matter and Client, in any order. Booking brings the work-log-from-booking path.
-6. **The frappe-ui work log screen.** By now you know the model holds and can build the fast entry path against something stable.
-7. **Billing.** Service, Quotation with its line table, per-entity numbering, print format with a Thai font proven first. Then Invoice, Payment, and the status derivation. FlowAccount reference fields are plain Data plus a URL, no integration.
-8. **The inbox.**
+4. **Work Log and Timeline Entry together.** Work log is the first timeline feed, so build the shared write helper here and get its shape right before five more doctypes call it.
+5. **Booking, Matter Deadline, Required Document**, each writing timeline entries through the same helper.
+6. **The client page** in frappe-ui. By now there is a real timeline to render and a real matter list to show.
+7. **Fast work log entry**, as a panel on the client and matter pages.
+8. **Billing.** Service, Quotation with its line table, per-entity numbering, print format with a Thai font proven first. Then Invoice, Payment, and the status derivation. All three write timeline entries. FlowAccount reference fields are plain Data plus a URL, no integration.
+9. **The inbox.**
 
-Everything except step 6 is usable in Desk with no frontend work at all.
+Steps 1 to 5 and 8 are usable in Desk with no frontend work at all.
+
+## Naming
+
+The doctype is `Matter` in this plan. It was labelled "Job" in Twenty and you have called it a project. Matter is the standard term in a law firm and reads correctly to anyone the firm hires later, so it is the default here. Decide before step 3, because renaming a doctype after it has links pointing at it is tedious.
