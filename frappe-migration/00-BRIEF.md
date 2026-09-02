@@ -6,7 +6,7 @@ Hand this file, `01-DATA-MODEL.md`, `02-FRAPPE-PLAN.md` and `schema.json` to the
 
 **A CRM for a small Thai law / visa services firm, with a work log built into it and some finance attached.** The client record is the centre of the system. Everything else exists to hang off it.
 
-The test the system has to pass: **open a client and see everything.** Who they are and how to reach them, every matter the firm has run for them, and a running timeline of everything that has happened, without hunting through separate lists.
+The test the system has to pass: **open a client and see everything.** Who they are and how to reach them, every job the firm has run for them, and a running timeline of everything that has happened, without hunting through separate lists.
 
 The work log is an extension of that, not a product of its own. It is how the timeline gets populated with what staff actually did, alongside bookings, messages, documents received and documents sent. Quotations, invoices and payments exist because the firm has to send documents to clients, not because anyone wants to run accounting here.
 
@@ -16,8 +16,8 @@ Read that as a ranking. When a design choice trades away the completeness of the
 
 - Clients, as individuals and as organizations, with names in both English and Thai, and the contact people inside an organization
 - A single client timeline merging work logs, bookings, messages, notes, documents received, quotations, invoices and payments into one chronological view
-- Jobs (called "matters" in the code, mapped onto Twenty's `opportunity` object), each with a type of work, an owner, deadlines and a list of documents the client still owes us
-- **Staff work logs**, in minutes, against a matter or a client, marked billable or not, with a status
+- Jobs (`opportunity` in Twenty, labelled "Job" there, and `Job` in the new system), each with a type of work, an owner, deadlines and a list of documents the client still owes us
+- **Staff work logs**, in minutes, against a job or a client, marked billable or not, with a status
 - Appointments and consultations, which work logs can come out of
 - Three separate legal entities of the firm, each billing under its own name and tax ID
 - Quotations, then invoices raised from them, then payments against those invoices
@@ -38,7 +38,7 @@ This was evaluated properly, not assumed. See the rejected options below.
 - **Retired services must keep resolving.** `product.isActive` is a flag, never a delete, because old quotations and invoices reference the line.
 - **Tax is per line.** `taxRate` sits on the service and is copied to each quotation and invoice line. Twenty has no tax concept at all, which is one of the reasons for moving.
 - **Work logs are in minutes, not hours.** Nobody rounds 20 minutes up to half an hour honestly, so do not make them.
-- **Everything that happens is attached to a client, even when there is no matter yet.** A work log, a booking or a conversation must carry a client link whether or not a matter exists. This is what guarantees the client timeline is never missing something. In Twenty this is why `workLog.person` exists alongside `workLog.matter`.
+- **Everything that happens is attached to a client, even when there is no job yet.** A work log, a booking or a conversation must carry a client link whether or not a job exists. This is what guarantees the client timeline is never missing something. In Twenty this is why `workLog.person` exists alongside `workLog.matter`.
 - **Messaging handles are separate from contacts.** One person can hold a LINE user id, an Instagram handle and a phone number. `contactIdentity` models the handle, `person` models the human, and inbound webhooks resolve one to the other. Provider message and thread ids are stored so redelivered webhooks deduplicate.
 
 ## Data to migrate
@@ -66,7 +66,7 @@ frappe-ui comes out for the two screens that people touch every day and that a g
 
 Evaluated seriously, because on paper it covers the finance half: multi-company is exactly the three billing entities, Sales Invoice and Payment Entry handle per-line tax and outstanding amounts, Item with `is_stock_item = 0` is a service catalogue, and [`ecosoft-frappe/erpnext_thailand`](https://github.com/ecosoft-frappe/erpnext_thailand) adds Thai tax invoices, withholding tax certificates and PND reports.
 
-Rejected because the finance half is not what this system is for. ERPNext contributes nothing to work logs, practice areas, matter deadlines, required documents, bookings or the inbox, which is the majority of the build. Its Timesheet is close to our work log but not free, being built around activity types and billing rates that feed a Sales Invoice, and bending it to minutes, a billable flag, a status, a practice area and a link to a booking costs more than writing the doctype. The price is permanent: a chart of accounts and fiscal years to maintain, `erpnext_thailand` as a dependency, and custom doctypes that have to survive ERPNext upgrades. That is a lot to carry for five doctypes and a print format.
+Rejected because the finance half is not what this system is for. ERPNext contributes nothing to work logs, practice areas, job deadlines, required documents, bookings or the inbox, which is the majority of the build. Its Timesheet is close to our work log but not free, being built around activity types and billing rates that feed a Sales Invoice, and bending it to minutes, a billable flag, a status, a practice area and a link to a booking costs more than writing the doctype. The price is permanent: a chart of accounts and fiscal years to maintain, `erpnext_thailand` as a dependency, and custom doctypes that have to survive ERPNext upgrades. That is a lot to carry for five doctypes and a print format.
 
 **Reversal condition.** If the firm ever decides to run the ledger in-house and drop FlowAccount, this flips and ERPNext becomes the right base. Before that decision, two things need checking with the firm's accountant, who currently handles all of it:
 
@@ -83,15 +83,15 @@ Rejected because the finance half is not what this system is for. ERPNext contri
 
 Frappe CRM defines 39 of its own doctypes, including `CRM Lead`, `CRM Deal`, `CRM Organization`, `CRM Contacts`, `CRM Task` and `FCRM Note`. It uses the stock `Contact` doctype, but organizations, tasks and notes are all its own.
 
-The decisive point is its supported extension surface: Custom Fields on its own doctypes through a side panel layout builder, plus **CRM Form Script**, which its documentation describes as the only supported way to customize CRM UI behavior. That is field-level customization of pages that already exist. There is no supported way to add a Matter page, a Work Log entry screen, or a Matter list view. Getting those means editing its Vue frontend, which is a fork to merge upstream into forever.
+The decisive point is its supported extension surface: Custom Fields on its own doctypes through a side panel layout builder, plus **CRM Form Script**, which its documentation describes as the only supported way to customize CRM UI behavior. That is field-level customization of pages that already exist. There is no supported way to add a Job page, a Work Log entry screen, or a Job list view. Getting those means editing its Vue frontend, which is a fork to merge upstream into forever.
 
-The two screens this firm uses daily are a matter record and a work log entry form. Frappe CRM has no concept of either.
+The two screens this firm uses daily are a job record and a work log entry form. Frappe CRM has no concept of either.
 
 **Do read it.** It is the best reference implementation of frappe-ui available. Clone it somewhere read-only and copy its list view, filtering, side panel and data fetching patterns. Copying patterns costs nothing. Inheriting its release cycle costs forever.
 
 ### Considered: installing Frappe CRM alongside, unmodified
 
-Apps compose on one site, so this is real. Frappe CRM uses the stock `Contact` doctype, so `tll_crm` matters and work logs could link to the same contact records. The firm gets a polished contacts and intake UI, `tll_crm` keeps matters, work logs and billing, and Frappe CRM upgrades cleanly because nothing was touched.
+Apps compose on one site, so this is real. Frappe CRM uses the stock `Contact` doctype, so `tll_crm` jobs and work logs could link to the same contact records. The firm gets a polished contacts and intake UI, `tll_crm` keeps jobs, work logs and billing, and Frappe CRM upgrades cleanly because nothing was touched.
 
 Not taken, for two reasons. Staff would work contacts at `/crm` and everything else in Desk or the custom screens, which is daily friction for a six-person firm. And `CRM Organization` and the `Client` doctype would both claim to be the client, resolvable only by dropping `Client` and pushing Thai legal name, tax ID, passport number and client type onto `CRM Organization` and `Contact` as custom fields, at which point the client model is shaped by their doctype rather than by the firm.
 
@@ -101,7 +101,7 @@ Revisit if the firm turns out to want a real enquiry pipeline, which `CRM Lead` 
 
 [`MicroPyramid/Django-CRM`](https://github.com/MicroPyramid/Django-CRM), marketed as BottleCRM. Django REST backend, SvelteKit frontend, Flutter mobile app, PostgreSQL, MIT, actively maintained. Note that `MicroPyramid/opensource-startup-crm`, which search results still surface, is a SvelteKit rewrite that was archived in November 2025. Do not clone that one.
 
-Rejected for the same reason as Frappe CRM, but the cost is higher. It is a sales CRM with no matter, work log, deadline, required document, billing entity or Thai tax concept, so all sixteen doctypes in `01-DATA-MODEL.md` would be new. In Frappe, defining a doctype generates a working list view, form, filters, permissions and REST endpoint. In BottleCRM each one is a Django model, a migration, a serializer, a viewset, and then SvelteKit list, detail and form pages, all hand-written. For a system that is almost entirely custom objects, that is the expensive direction.
+Rejected for the same reason as Frappe CRM, but the cost is higher. It is a sales CRM with no job, work log, deadline, required document, billing entity or Thai tax concept, so all sixteen doctypes in `01-DATA-MODEL.md` would be new. In Frappe, defining a doctype generates a working list view, form, filters, permissions and REST endpoint. In BottleCRM each one is a Django model, a migration, a serializer, a viewset, and then SvelteKit list, detail and form pages, all hand-written. For a system that is almost entirely custom objects, that is the expensive direction.
 
 It would be the right call only if the person maintaining this is a strong Django developer who would rather not learn Frappe's conventions. That is a legitimate reason and it should beat any architecture argument. In that case the honest question is whether BottleCRM's sales scaffolding is worth more than starting from plain Django, given most of it would be deleted.
 
@@ -109,7 +109,7 @@ It would be the right call only if the person maintaining this is a strong Djang
 
 This question has come up repeatedly. The test is two questions, in order:
 
-1. **Does it model a matter, a work log and a client timeline?** No existing CRM does, because they are all built around a sales pipeline. So the answer is always no, and the real question is the second one.
+1. **Does it model a job, a work log and a client timeline?** No existing CRM does, because they are all built around a sales pipeline. So the answer is always no, and the real question is the second one.
 2. **What does adding a custom object cost?** If the platform generates a usable list view, form, permissions and API from a schema definition, adding sixteen objects is cheap and the platform is a candidate. If every object needs hand-written backend and frontend code, the product's existing screens are worth very little to us, because we will not use them.
 
 Frappe passes the second test. Frappe CRM, BottleCRM and every polished sales CRM fail it, because their value is the screens they already have, and we need different screens.

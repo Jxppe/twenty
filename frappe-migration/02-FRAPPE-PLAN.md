@@ -40,8 +40,8 @@ bench start
 
 ```
 apps/tll_crm/tll_crm/
-  crm/doctype/         client, matter, practice_area, billing_entity, booking,
-                       matter_deadline, required_document
+  crm/doctype/         client, job, practice_area, billing_entity, booking,
+                       job_deadline, required_document
   work/doctype/        work_log, timeline_entry
   billing/doctype/     service, quotation, quotation_line, invoice, invoice_line, payment
   inbox/doctype/       channel_account, contact_identity, conversation, inbox_message
@@ -67,12 +67,12 @@ Get this right first. Everything links to it.
 | `legal_name_en`, `legal_name_th` | organization | registered name exactly as it must appear on an invoice |
 | `tax_id` | organization | Thai taxpayer identification number |
 | `id_number`, `nationality` | individual | passport or Thai ID. A visa practice cannot work without these |
-| `default_billing_entity` | both | overridable per matter |
+| `default_billing_entity` | both | overridable per job |
 | address | both | Frappe's stock Address doctype, linked |
 
-Matter, Work Log, Booking, Quotation and Invoice each get **one** `client` Link field, not two.
+Job, Work Log, Booking, Quotation and Invoice each get **one** `client` Link field, not two.
 
-**On Work Log, Booking and Conversation the `client` link is required and the `matter` link is optional.** Work arrives before a matter exists, and an entry with no client is invisible on the client page, which is the whole point of the system.
+**On Work Log, Booking and Conversation the `client` link is required and the `job` link is optional.** Work arrives before a job exists, and an entry with no client is invisible on the client page, which is the whole point of the system.
 
 **Frappe's stock `Contact` for the humans**, with a plain Link field to Client and `contact_name_th` added as a Custom Field.
 
@@ -95,14 +95,14 @@ Entries come from doctypes with different date fields: work log uses the day wor
 | field | note |
 |---|---|
 | `client` | Link, required, indexed |
-| `matter` | Link, optional, indexed |
+| `job` | Link, optional, indexed |
 | `occurred_at` | Datetime, the business time rather than creation time, indexed |
 | `entry_type` | Select: WORK_LOG, BOOKING, MESSAGE, NOTE, DOCUMENT_RECEIVED, QUOTATION_SENT, INVOICE_ISSUED, PAYMENT_RECEIVED, DEADLINE_SET, DEADLINE_MET |
 | `summary` | Data, one prerendered line |
 | `source_doctype`, `source_name` | the real record, for click-through |
 | `staff` | Link, who did it |
 
-Index on `(client, occurred_at desc)`. The client page is one query. The matter page is the same query with a matter filter. "What happened this week" is the same query again.
+Index on `(client, occurred_at desc)`. The client page is one query. The job page is the same query with a job filter. "What happened this week" is the same query again.
 
 **It is a projection, not truth.** Every entry is derivable from its source record, so a rebuild patch can regenerate the table wholesale if it drifts. Never put anything in it that does not exist somewhere else. Write entries from one shared helper called by each source doctype's `after_insert` and `on_update`, so the summary formatting lives in one place.
 
@@ -138,8 +138,8 @@ All of it in doctype controllers, which is the thing Twenty had nowhere to put.
 
 Work log:
 - `minutes` is the stored unit. Any hours figure anywhere is a display conversion, never a column.
-- A work log with a `booking` inherits that booking's matter and client unless explicitly set.
-- Default `billingEntity` comes from the matter, and the matter's comes from its practice area.
+- A work log with a `booking` inherits that booking's job and client unless explicitly set.
+- Default `billing_entity` comes from the job, and the job's comes from its practice area.
 
 Billing:
 - `QuotationLine.lineTotal` = quantity x unitPrice - discount. Recompute in the parent's `validate`.
@@ -164,9 +164,9 @@ Do not use `hash` or `format:` naming with a plan to renumber later.
 
 Desk covers everything and nothing here needs a frontend to be usable. Three screens are worth building anyway, in this order, all after the data model is settled.
 
-**The client page, the flagship.** This is what the system is for. One screen showing identity and contact details, the contact people, every matter for this client with its status, and the merged timeline from `Timeline Entry`, filterable by type and by matter. Open items surfaced without hunting: outstanding deadlines, documents still owed, unpaid invoices. Everything on it is one indexed query plus the matters list.
+**The client page, the flagship.** This is what the system is for. One screen showing identity and contact details, the contact people, every job for this client with its status, and the merged timeline from `Timeline Entry`, filterable by type and by job. Open items surfaced without hunting: outstanding deadlines, documents still owed, unpaid invoices. Everything on it is one indexed query plus the jobs list.
 
-**Fast work log entry, second.** Everyone touches it every day and the system succeeds or fails on whether logging 20 minutes takes ten seconds. A Desk form with eight fields and four Link lookups is not that. It does not need to be its own screen: a panel on the client and matter pages is better, because it puts logging where the context already is. Pick a matter, type one line, set minutes, billable on or off, save, repeat. Recent matters cached client side, keyboard driven, no reload between entries. Plus a week view of your own logs for correcting yesterday.
+**Fast work log entry, second.** Everyone touches it every day and the system succeeds or fails on whether logging 20 minutes takes ten seconds. A Desk form with eight fields and four Link lookups is not that. It does not need to be its own screen: a panel on the client and job pages is better, because it puts logging where the context already is. Pick a job, type one line, set minutes, billable on or off, save, repeat. Recent jobs cached client side, keyboard driven, no reload between entries. Plus a week view of your own logs for correcting yesterday.
 
 **The inbox, third.** Decide first whether to extend **Frappe Helpdesk** or build the four doctypes in `01-DATA-MODEL.md`. Helpdesk gives an agent inbox with threading, assignment and statuses, already on frappe-ui. It is email-first, so LINE is a custom webhook and a custom channel either way. The real question is whether Helpdesk's ticket model fits a LINE conversation, which is a running thread with no resolution state, closer to a chat than a ticket. If it does not fit without fighting it, build the four doctypes, which are small and already specified. Either way, inbound messages must write `Timeline Entry` rows so they appear on the client page.
 
@@ -179,15 +179,15 @@ Everything else stays in Desk until someone complains about a specific screen.
 
 ## Build order
 
-The spine is **Client, then Matter, then the things that happen to them**. Build enough of that to fill a timeline, then build the client page, which is the point of the system. Billing and the inbox come last.
+The spine is **Client, then Job, then the things that happen to them**. Build enough of that to fill a timeline, then build the client page, which is the point of the system. Billing and the inbox come last.
 
 1. **Client and Contact.** The centre of the system. Thai name fields, both client types, one contact created alongside each individual client.
-2. **Billing Entity and Practice Area.** Small reference data, but Matter needs both.
-3. **Matter**, linked to Client, with the practice area driving the default billing entity.
+2. **Billing Entity and Practice Area.** Small reference data, but Job needs both.
+3. **Job**, linked to Client, with the practice area driving the default billing entity.
 4. **Work Log and Timeline Entry together.** Work log is the first timeline feed, so build the shared write helper here and get its shape right before five more doctypes call it.
-5. **Booking, Matter Deadline, Required Document**, each writing timeline entries through the same helper.
-6. **The client page** in frappe-ui. By now there is a real timeline to render and a real matter list to show.
-7. **Fast work log entry**, as a panel on the client and matter pages.
+5. **Booking, Job Deadline, Required Document**, each writing timeline entries through the same helper.
+6. **The client page** in frappe-ui. By now there is a real timeline to render and a real job list to show.
+7. **Fast work log entry**, as a panel on the client and job pages.
 8. **Billing.** Service, Quotation with its line table, per-entity numbering, print format with a Thai font proven first. Then Invoice, Payment, and the status derivation. All three write timeline entries. FlowAccount reference fields are plain Data plus a URL, no integration.
 9. **The inbox.**
 
@@ -195,4 +195,10 @@ Steps 1 to 5 and 8 are usable in Desk with no frontend work at all.
 
 ## Naming
 
-The doctype is `Matter` in this plan. It was labelled "Job" in Twenty and you have called it a project. Matter is the standard term in a law firm and reads correctly to anyone the firm hires later, so it is the default here. Decide before step 3, because renaming a doctype after it has links pointing at it is tedious.
+The doctype is **`Job`**. Twenty labels it "Job" throughout and the firm's staff are Thai, so "Matter", the English legal term, is the wrong word on screen even though it is the industry standard elsewhere.
+
+`Job` is also the technically safer of the two candidates. `CASE` is a reserved word in MariaDB, so a fieldname `case` needs backticking in every hand-written query. `Job` has no such collision. Its overlap with Frappe's background jobs is only in prose, never in a doctype name.
+
+In Twenty this object is `opportunity` with a "Job" label. `01-DATA-MODEL.md` is a factual dump of the Twenty workspace and still says `matter` on the link fields and `matterDeadline` on the deadline object, because that is what is really there. Read those as `job` and `Job Deadline`.
+
+Doctype names are expensive to change once links point at them. Display labels are not: in Frappe the label is separate from the name and goes through the translation file, so it can change any day, including into Thai if the UI is ever translated.

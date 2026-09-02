@@ -2,6 +2,8 @@
 
 Dumped from the live Twenty workspace metadata API. Every object below is a table the new system has to reproduce in some form. System audit fields (`id`, `createdAt`, `updatedAt`, `deletedAt`, `createdBy`) exist on every object and are omitted. Timeline/attachment/note/task back-relations are omitted for the same reason.
 
+**Naming note.** This is a factual dump of the Twenty workspace, so it uses Twenty's names. The job object is Twenty's `opportunity`, labelled "Job", and link fields pointing at it are called `matter`. In the new system it is the `Job` doctype and the link field is `job`, and `matterDeadline` becomes `Job Deadline`. See the Naming section of `02-FRAPPE-PLAN.md`.
+
 Currency is THB throughout. Money is stored as `amountMicros` (integer, value x 1_000_000) plus a currency code.
 
 
