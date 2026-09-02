@@ -106,7 +106,7 @@ Get this right first. Everything links to it.
 
 Job, Work Log, Booking, Quotation and Invoice each get **one** `client` Link field, not two.
 
-**On Work Log, Booking and Conversation the `client` link is required and the `job` link is optional.** Work arrives before a job exists, and an entry with no client is invisible on the client page, which is the whole point of the system.
+**On Work Log and Booking the `client` link is required and the `job` link is optional.** Work arrives before a job exists, and an entry with no client is invisible on the client page, which is the whole point of the system.
 
 **Frappe's stock `Contact` for the humans**, with a plain Link field to Client and `contact_name_th` added as a Custom Field.
 
